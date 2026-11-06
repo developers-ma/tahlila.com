@@ -8,6 +8,7 @@ import {
     Barcode,
     Package,
     MessageCircle,
+    Mail,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 export interface Patient {
@@ -168,6 +169,12 @@ export const navigationSections: {
                 href: "/chat",
                 icon: MessageCircle,
                 permission: "chat.use",
+            },
+            {
+                label: "Messagerie",
+                href: "/email",
+                icon: Mail,
+                permission: "email.send",
             },
             {
                 label: "Équipe",

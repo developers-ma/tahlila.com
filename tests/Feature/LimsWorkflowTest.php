@@ -222,6 +222,29 @@ class LimsWorkflowTest extends TestCase
         $this->assertDatabaseHas('test_for_patients', ['id' => $foreignLine->id, 'test_id' => $first->id]);
     }
 
+    public function test_barcode_print_settings_are_saved_for_the_next_print(): void
+    {
+        [$patient, $price] = $this->fixtures();
+        $order = Order::create([
+            'patient_id' => $patient->id,
+            'total_price' => 50,
+            'paid_amount' => 0,
+            'remaining_or_give' => 50,
+            'payment_method' => 'cash',
+            'test_status' => '1',
+        ]);
+        $order->prices()->attach($price);
+
+        $this->postJson('/test/barcodes/'.$order->id.'/print-settings', [
+            'tube_copies' => ['standard' => 2, '7' => 3],
+            'tube_label_format' => '50x30',
+        ])->assertOk()->assertJsonPath('tube_label_format', '50x30');
+
+        $saved = $order->fresh();
+        $this->assertSame(['standard' => 2, '7' => 3], $saved->tube_copies);
+        $this->assertSame('50x30', $saved->tube_label_format);
+    }
+
     public function test_laboratory_logo_upload_is_saved_to_the_public_disk(): void
     {
         $this->actingAs(User::factory()->create());

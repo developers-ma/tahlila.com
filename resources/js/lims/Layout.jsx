@@ -5,7 +5,6 @@ import {
     Bell,
     FlaskConical,
     LogOut,
-    Mail,
     Menu,
     Plus,
     Settings,
@@ -194,15 +193,6 @@ export function Layout({ children }) {
                     ))}
                 </nav>
                 <div className="sidebar-bottom">
-                    {can("email.send") && (
-                        <a
-                            href="/email"
-                            className={isActive("/email") ? "active" : ""}
-                        >
-                            <Mail size={18} strokeWidth={1.8} />
-                            {t("Messagerie")}
-                        </a>
-                    )}
                     {can("settings.manage") && (
                         <a href="/settings">
                             <Settings size={18} strokeWidth={1.8} />

@@ -9,13 +9,14 @@ use App\Models\Patient;
 class Test extends Model
 
 {
-    protected $fillable = ['patient_id', 'total_price', 'payment_method', 'paid_amount', 'remaining_or_give', 'test_status', 'prelevement_date'];
+    protected $fillable = ['patient_id', 'total_price', 'payment_method', 'paid_amount', 'remaining_or_give', 'test_status', 'prelevement_date', 'tube_copies', 'tube_label_format'];
 
     protected $casts = [
         'total_price' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'remaining_or_give' => 'decimal:2',
         'prelevement_date' => 'date',
+        'tube_copies' => 'array',
     ];
 
     public function patient()

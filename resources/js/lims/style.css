@@ -3908,10 +3908,27 @@ textarea {
     align-items: start;
 }
 
+.collection-patient-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+    gap: 22px;
+    align-items: stretch;
+    margin-bottom: 26px;
+}
+
+.collection-patient-row .patient-summary {
+    height: 100%;
+    margin-bottom: 0;
+}
+
+.collection-patient-row .analyses-card {
+    height: 100%;
+}
+
 .collection-main {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     min-width: 0;
-    flex-direction: column;
     gap: 18px;
 }
 
@@ -3982,6 +3999,20 @@ textarea {
     gap: 7px;
     color: #71806b;
     font-size: 10px;
+}
+
+.collection-save-status {
+    flex: 1;
+    color: #6f8069;
+    font-size: 10px;
+    text-align: right;
+}
+
+.collection-save-status:not(:empty)::before {
+    margin-right: 5px;
+    color: #6c9c4d;
+    content: "✓";
+    font-weight: 800;
 }
 
 .tube-counter-list {
@@ -4117,20 +4148,28 @@ textarea {
     width: 45px;
     height: 45px;
     place-items: center;
-    margin: 18px 0;
+    margin: 0;
     border-radius: 13px;
     background: #eaf3df;
     color: var(--green);
 }
 
-.print-setup-card h2 {
-    margin-bottom: 7px;
+.print-setup-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    margin: 18px 0 20px;
+}
+
+.print-setup-heading h2 {
+    margin: 2px 0 7px;
     font-size: 17px;
 }
 
-.print-setup-card > p {
-    margin-bottom: 20px;
+.print-setup-heading p {
+    margin: 0;
     font-size: 10px;
+    line-height: 1.55;
 }
 
 .print-metrics {
@@ -4164,27 +4203,6 @@ textarea {
 
 .print-format-field {
     margin-bottom: 14px;
-}
-
-.thermal-checklist {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 18px;
-    border-top: 1px solid var(--line);
-    padding-top: 17px;
-}
-
-.thermal-checklist span {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    color: #788572;
-    font-size: 9px;
-}
-
-.thermal-checklist svg {
-    color: #658f49;
 }
 
 .label-preview-section {
@@ -4666,10 +4684,7 @@ textarea {
     transform: translateX(9px);
 }
 
-[dir="rtl"]
-    .settings-choice-grid
-    .check
-    input[type="checkbox"]:checked::after {
+[dir="rtl"] .settings-choice-grid .check input[type="checkbox"]:checked::after {
     transform: translateX(-9px);
 }
 
@@ -5669,6 +5684,15 @@ footer span {
     }
 
     .collection-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .collection-main {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .collection-patient-row {
         grid-template-columns: 1fr;
     }
 

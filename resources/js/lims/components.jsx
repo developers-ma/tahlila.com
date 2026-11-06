@@ -259,6 +259,7 @@ export function Field({ field, record = {}, useOld = true }) {
         inputMode,
         min,
         max,
+        onChange,
     } = field;
     const value =
         useOld && p.old?._submitted
@@ -273,6 +274,7 @@ export function Field({ field, record = {}, useOld = true }) {
         inputMode,
         min,
         max,
+        onChange,
         "aria-invalid": !!p.errors[name],
         "aria-describedby":
             [help && `${fieldId}-help`, p.errors[name] && `${fieldId}-error`]

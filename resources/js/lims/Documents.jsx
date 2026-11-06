@@ -1,5 +1,5 @@
 import { t } from "./i18n";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
     Banknote,
     Building2,
@@ -778,9 +778,22 @@ function TubeCounter({
 }
 
 export function BarcodePage() {
-    const [copies, setCopies] = useState(1);
-    const [tubeCopies, setTubeCopies] = useState({});
-    const [labelFormat, setLabelFormat] = useState("50x25");
+    const savedTubeCopies = p.record.tube_copies || {};
+    const [copies, setCopies] = useState(Number(savedTubeCopies.standard || 1));
+    const [tubeCopies, setTubeCopies] = useState(() =>
+        Object.fromEntries(
+            Object.entries(savedTubeCopies)
+                .filter(([key]) => key !== "standard")
+                .map(([key, value]) => [key, Number(value) || 0]),
+        ),
+    );
+    const [labelFormat, setLabelFormat] = useState(
+        p.record.tube_label_format || "50x25",
+    );
+    const [printSaving, setPrintSaving] = useState(false);
+    const [printError, setPrintError] = useState("");
+    const [saveState, setSaveState] = useState("idle");
+    const formRef = useRef(null);
     const patient = p.record.patient;
     const accession = "LAB-" + String(p.record.id).padStart(6, "0");
     const analyses = p.lines
@@ -806,12 +819,74 @@ export function BarcodePage() {
     ];
     const selectedTubeTypes = new Set(labels.map((label) => label.name)).size;
 
+    const savePrintSettingsAndPrint = async () => {
+        setPrintSaving(true);
+        setPrintError("");
+        try {
+            const response = await fetch(
+                `/test/barcodes/${p.record.id}/print-settings`,
+                {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": p.csrf,
+                    },
+                    body: JSON.stringify({
+                        tube_copies: {
+                            standard: copies,
+                            ...tubeCopies,
+                        },
+                        tube_label_format: labelFormat,
+                    }),
+                },
+            );
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(
+                    data.message || "Paramètres d’impression non enregistrés.",
+                );
+            }
+            window.print();
+        } catch (error) {
+            setPrintError(error.message || "Enregistrement impossible.");
+        } finally {
+            setPrintSaving(false);
+        }
+    };
+
+    const saveCollection = async (event) => {
+        event.preventDefault();
+        if (saveState === "saving") return;
+        setSaveState("saving");
+        try {
+            const form = event.currentTarget;
+            const response = await fetch(form.action, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    Accept: "application/json",
+                    "X-CSRF-TOKEN": p.csrf,
+                },
+                body: new FormData(form),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.message || "Enregistrement impossible.");
+            }
+            setSaveState("saved");
+        } catch (error) {
+            setSaveState(error.message || "Enregistrement impossible.");
+        }
+    };
+
     return (
         <>
             <Heading>
                 <Button
-                    onClick={() => window.print()}
-                    disabled={!labels.length}
+                    onClick={savePrintSettingsAndPrint}
+                    disabled={!labels.length || printSaving}
                 >
                     <Printer size={17} />
                     {t("Imprimer les étiquettes")}
@@ -820,7 +895,31 @@ export function BarcodePage() {
             <DocumentLinks />
 
             <div className="no-print">
-                <PatientSummary />
+                <div className="collection-patient-row">
+                    <PatientSummary />
+                    <section className="panel collection-card analyses-card">
+                        <header className="collection-card-head">
+                            <span className="collection-icon">
+                                <ClipboardList size={19} />
+                            </span>
+                            <div>
+                                <h2>Analyses demandées</h2>
+                                <p>
+                                    {p.lines.length} analyse
+                                    {p.lines.length > 1 ? "s" : ""} dans ce
+                                    dossier.
+                                </p>
+                            </div>
+                        </header>
+                        <div className="analysis-chip-list">
+                            {p.lines.map((line) => (
+                                <span key={line.id}>
+                                    {line.test_name || "Analyse archivée"}
+                                </span>
+                            ))}
+                        </div>
+                    </section>
+                </div>
                 <div className="collection-workspace">
                     <div className="collection-main">
                         <section className="panel collection-card">
@@ -841,6 +940,8 @@ export function BarcodePage() {
                                 <Form
                                     action={"/test/barcodes/" + p.record.id}
                                     method="PUT"
+                                    formRef={formRef}
+                                    onSubmit={saveCollection}
                                 >
                                     <div className="form-grid">
                                         <Field
@@ -850,6 +951,8 @@ export function BarcodePage() {
                                                 type: "select",
                                                 options: statuses,
                                                 required: true,
+                                                onChange: (event) =>
+                                                    event.currentTarget.form?.requestSubmit(),
                                                 help: "Choisissez En traitement après la collecte.",
                                             }}
                                             record={p.record}
@@ -869,7 +972,23 @@ export function BarcodePage() {
                                             <CheckCircle2 size={16} />
                                             Dossier {accession}
                                         </span>
-                                        <Button>{t("Enregistrer")}</Button>
+                                        <span
+                                            className="collection-save-status"
+                                            role="status"
+                                        >
+                                            {saveState === "saving"
+                                                ? "Enregistrement…"
+                                                : saveState === "saved"
+                                                  ? "Enregistré"
+                                                  : saveState !== "idle"
+                                                    ? saveState
+                                                    : ""}
+                                        </span>
+                                        <Button
+                                            disabled={saveState === "saving"}
+                                        >
+                                            {t("Enregistrer")}
+                                        </Button>
                                     </div>
                                 </Form>
                             </div>
@@ -933,41 +1052,23 @@ export function BarcodePage() {
                                 )}
                             </div>
                         </section>
-
-                        <section className="panel collection-card analyses-card">
-                            <header className="collection-card-head">
-                                <span className="collection-icon">
-                                    <ClipboardList size={19} />
-                                </span>
-                                <div>
-                                    <h2>Analyses demandées</h2>
-                                    <p>
-                                        {p.lines.length} analyse
-                                        {p.lines.length > 1 ? "s" : ""} dans ce
-                                        dossier.
-                                    </p>
-                                </div>
-                            </header>
-                            <div className="analysis-chip-list">
-                                {p.lines.map((line) => (
-                                    <span key={line.id}>
-                                        {line.test_name || "Analyse archivée"}
-                                    </span>
-                                ))}
-                            </div>
-                        </section>
                     </div>
 
                     <aside className="panel print-setup-card">
                         <span className="collection-step">3</span>
-                        <span className="print-setup-icon">
-                            <Printer size={22} />
-                        </span>
-                        <h2>Contrôler & imprimer</h2>
-                        <p>
-                            Vérifiez la quantité et le format avant d’envoyer
-                            les étiquettes à l’imprimante thermique.
-                        </p>
+                        <div className="print-setup-heading">
+                            <span className="print-setup-icon">
+                                <Printer size={22} />
+                            </span>
+                            <div>
+                                <h2>Contrôler & imprimer</h2>
+                                <p>
+                                    Vérifiez la quantité et le format avant
+                                    d’envoyer les étiquettes à l’imprimante
+                                    thermique.
+                                </p>
+                            </div>
+                        </div>
                         <div className="print-metrics">
                             <div>
                                 <strong>{labels.length}</strong>
@@ -984,6 +1085,11 @@ export function BarcodePage() {
                                 </span>
                             </div>
                         </div>
+                        {printError && (
+                            <div className="alert-inline" role="alert">
+                                {printError}
+                            </div>
+                        )}
                         <label className="field print-format-field">
                             Format thermique
                             <select
@@ -1004,24 +1110,12 @@ export function BarcodePage() {
                             className="full"
                             type="button"
                             disabled={!labels.length}
-                            onClick={() => window.print()}
+                            onClick={savePrintSettingsAndPrint}
                         >
                             <Printer size={17} />
                             Imprimer {labels.length || ""} étiquette
                             {labels.length > 1 ? "s" : ""}
                         </Button>
-                        <div className="thermal-checklist">
-                            <span>
-                                <CheckCircle2 size={14} /> Échelle 100 %
-                            </span>
-                            <span>
-                                <CheckCircle2 size={14} /> Marges désactivées
-                            </span>
-                            <span>
-                                <CheckCircle2 size={14} /> Une étiquette par
-                                tube
-                            </span>
-                        </div>
                     </aside>
                 </div>
             </div>

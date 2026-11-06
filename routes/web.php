@@ -74,6 +74,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/tests/create', [TestController::class, 'store'])->middleware('permission:orders.manage')->name('tests.store.create');
     Route::put('/tests/{test}/edit', [TestController::class, 'update'])->middleware('permission:orders.manage')->name('tests.update.edit');
     Route::put('/test/barcodes/{test}', [BarcodeController::class, 'update'])->middleware('permission:collection.manage')->name('barcodes.update');
+    Route::post('/test/barcodes/{test}/print-settings', [BarcodeController::class, 'savePrintSettings'])->middleware('permission:collection.manage')->name('barcodes.print-settings');
 
     Route::post('/staff', [StaffController::class, 'store'])->middleware('permission:staff.manage')->name('staff.store');
     Route::put('/staff/{user}', [StaffController::class, 'update'])->middleware('permission:staff.manage')->name('staff.update');
