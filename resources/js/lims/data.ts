@@ -53,6 +53,62 @@ export function replacePage(next: PageEnvelope): void {
     Object.assign(p, next);
     window.dispatchEvent(new CustomEvent("lims:page", { detail: next }));
 }
+
+let csrfRefresh: Promise<string> | null = null;
+
+export function refreshCsrfToken(): Promise<string> {
+    if (csrfRefresh) return csrfRefresh;
+
+    csrfRefresh = fetch("/csrf-token", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+    })
+        .then(async (response) => {
+            if (!response.ok) throw new Error("Unable to refresh CSRF token");
+            const data = await response.json();
+            if (!data.token) throw new Error("Missing CSRF token");
+            p.csrf = data.token;
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.setAttribute("content", data.token);
+            document
+                .querySelectorAll('input[name="_token"]')
+                .forEach((input) => {
+                    (input as HTMLInputElement).value = data.token;
+                });
+            return data.token as string;
+        })
+        .finally(() => {
+            csrfRefresh = null;
+        });
+
+    return csrfRefresh;
+}
+
+export async function csrfFetch(
+    input: RequestInfo | URL,
+    init: RequestInit = {},
+): Promise<Response> {
+    const request = (token: string) => {
+        const headers = new Headers(init.headers);
+        headers.set("X-CSRF-TOKEN", token);
+        if (init.body instanceof FormData && init.body.has("_token")) {
+            init.body.set("_token", token);
+        }
+        return fetch(input, {
+            ...init,
+            headers,
+            credentials: init.credentials || "same-origin",
+        });
+    };
+
+    let response = await request(p.csrf);
+    if (response.status === 419) {
+        response = await request(await refreshCsrfToken());
+    }
+    return response;
+}
 export const statuses = {
     0: "Devis",
     1: "À prélever",

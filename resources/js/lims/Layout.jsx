@@ -230,10 +230,10 @@ export function Layout({ children }) {
                     >
                         <Menu />
                     </button>
-                    <span className="breadcrumb">
-                        {t("Espace laboratoire")}
-                        <span>/</span> <b>{t(p.title)}</b>
-                    </span>
+                    <a className="mobile-topbar-brand" href="/dashboard" aria-label="Tahlila">
+                        <FlaskConical size={22} />
+                        <strong>tahlila</strong>
+                    </a>
                     <div className="header-right">
                         {can("orders.manage") && (
                             <a className="topbar-new-order" href="/new-test">

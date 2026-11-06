@@ -336,6 +336,17 @@ class LimsPageController extends Controller
             $page['title'] = 'Maintenance & mises à jour';
             $page['kind'] = 'info';
             $page['message'] = 'Les mises à jour sont déployées par votre administrateur. La version actuelle ne dispose pas de service de mise à jour automatique.';
+            $manifest = public_path('build/manifest.json');
+            $page['updateInfo'] = [
+                'applicationVersion' => (string) config('app.version', '1.0.0'),
+                'frameworkVersion' => app()->version(),
+                'phpVersion' => PHP_VERSION,
+                'maintenanceMode' => app()->isDownForMaintenance(),
+                'automaticUpdates' => false,
+                'lastDeployment' => File::exists($manifest)
+                    ? date(DATE_ATOM, File::lastModified($manifest))
+                    : null,
+            ];
         } elseif ($screen === 'profile') {
             $page['title'] = 'Mon compte';
         } elseif ($screen === 'newtest') {

@@ -9,7 +9,7 @@ import {
     Users,
     X,
 } from "lucide-react";
-import { p } from "./data";
+import { csrfFetch, p } from "./data";
 import { Heading } from "./components";
 import { t } from "./i18n";
 import "./chat.css";
@@ -88,7 +88,7 @@ export function Chat() {
             payload.append("recipient_id", selected.id);
             payload.append("body", message);
             files.forEach((file) => payload.append("attachments[]", file));
-            const response = await fetch("/chat/messages", {
+            const response = await csrfFetch("/chat/messages", {
                 method: "POST",
                 credentials: "same-origin",
                 headers: {

@@ -92,7 +92,7 @@ export function Mailbox() {
                         <span className="eyebrow">
                             {t("PREMIÈRE CONFIGURATION")}
                         </span>
-                        <h2>{t("Connectez la messagerie du laboratoire")}</h2>
+                        <h2>{t("Connecter la messagerie")}</h2>
                         <p>
                             {t(
                                 "Configurez SMTP pour envoyer et IMAP pour recevoir, lire et organiser les messages depuis Tahlila.",

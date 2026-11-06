@@ -15,6 +15,7 @@ import {
     HeartPulse,
     KeyRound,
     Mail,
+    PackageCheck,
     Palette,
     RotateCcw,
     Search,
@@ -23,9 +24,10 @@ import {
     SlidersHorizontal,
     Trash2,
     UserRound,
+    Users,
     Wrench,
 } from "lucide-react";
-import { p } from "./data";
+import { csrfFetch, p } from "./data";
 import { Button, Heading, Form, Field } from "./components";
 
 const settingsItems = [
@@ -79,11 +81,11 @@ const settingsItems = [
         icon: UserRound,
     },
     {
-        title: "Licence",
-        short: "Licence",
-        description: "État et gestion de l’installation.",
-        href: "/setting/license",
-        icon: ShieldCheck,
+        title: "Personnel",
+        short: "Personnel",
+        description: "Comptes, rôles et autorisations.",
+        href: "/staff",
+        icon: Users,
     },
     {
         title: "Maintenance",
@@ -989,7 +991,7 @@ export function Languages() {
                                     type="button"
                                     onClick={async () => {
                                         try {
-                                            const response = await fetch(
+                                            const response = await csrfFetch(
                                                 `/languages/${lang}/activate`,
                                                 {
                                                     method: "POST",
@@ -1004,6 +1006,7 @@ export function Languages() {
                                             setNotice(
                                                 `Langue ${lang.toUpperCase()} activée.`,
                                             );
+                                            window.location.reload();
                                         } catch {
                                             setNotice(
                                                 "Impossible d’activer cette langue.",
@@ -1044,7 +1047,7 @@ export function LanguageEditor() {
                     event.preventDefault();
                     setBusy(true);
                     try {
-                        const response = await fetch(
+                        const response = await csrfFetch(
                             `/languages/${p.language}/update`,
                             {
                                 method: "POST",
@@ -1142,19 +1145,115 @@ export function LanguageEditor() {
 
 export function SettingsInfo() {
     const update = p.screen === "update";
+
+    if (update) {
+        const info = p.updateInfo || {};
+        const deploymentDate = info.lastDeployment
+            ? new Intl.DateTimeFormat(p.locale || "en", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+              }).format(new Date(info.lastDeployment))
+            : t("Non disponible");
+
+        return (
+            <SettingsShell description={t("État, versions et méthode de maintenance de votre installation.")}>
+                <div className="update-dashboard">
+                    <section className="panel update-hero">
+                        <div className="update-hero-icon">
+                            <PackageCheck />
+                        </div>
+                        <div className="update-hero-copy">
+                            <span className="status status-3">
+                                <i /> {t("Système opérationnel")}
+                            </span>
+                            <h2>{t("Votre installation est à jour")}</h2>
+                            <p>{t("La maintenance est gérée de manière sécurisée par votre administrateur.")}</p>
+                        </div>
+                        <div className="update-version-badge">
+                            <span>{t("Version")}</span>
+                            <strong>{info.applicationVersion || "1.0.0"}</strong>
+                        </div>
+                    </section>
+
+                    <div className="update-metrics">
+                        <article className="panel update-metric">
+                            <Server />
+                            <span>{t("Application")}</span>
+                            <strong>v{info.applicationVersion || "1.0.0"}</strong>
+                        </article>
+                        <article className="panel update-metric">
+                            <ShieldCheck />
+                            <span>Laravel</span>
+                            <strong>v{info.frameworkVersion || "—"}</strong>
+                        </article>
+                        <article className="panel update-metric">
+                            <Wrench />
+                            <span>PHP</span>
+                            <strong>v{info.phpVersion || "—"}</strong>
+                        </article>
+                    </div>
+
+                    <div className="update-grid">
+                        <section className="panel update-panel">
+                            <header>
+                                <div>
+                                    <span className="eyebrow">{t("DÉPLOIEMENT")}</span>
+                                    <h3>{t("Maintenance administrée")}</h3>
+                                </div>
+                                <span className="update-safe-badge">
+                                    <ShieldCheck size={15} /> {t("Sécurisé")}
+                                </span>
+                            </header>
+                            <div className="update-timeline">
+                                <div>
+                                    <span><CheckCircle2 /></span>
+                                    <div>
+                                        <strong>{t("Installation active")}</strong>
+                                        <p>{t("Tous les services essentiels sont disponibles.")}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span><CheckCircle2 /></span>
+                                    <div>
+                                        <strong>{t("Mises à jour contrôlées")}</strong>
+                                        <p>{t("Les nouvelles versions sont validées avant leur déploiement.")}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span><CheckCircle2 /></span>
+                                    <div>
+                                        <strong>{t("Dernier déploiement")}</strong>
+                                        <p>{deploymentDate}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <aside className="panel update-support-card">
+                            <span className="round-icon"><Wrench /></span>
+                            <h3>{t("Besoin d’une mise à jour ?")}</h3>
+                            <p>{t("Contactez votre administrateur pour planifier une sauvegarde et un déploiement sécurisé.")}</p>
+                            <a href="mailto:support@tahlila.com" className="button">
+                                {t("Contacter l’administrateur")}
+                                <ArrowUpRight size={16} />
+                            </a>
+                            <a href="/settings" className="text-action">
+                                {t("Retour aux paramètres")}
+                            </a>
+                        </aside>
+                    </div>
+                </div>
+            </SettingsShell>
+        );
+    }
+
     return (
         <SettingsShell
-            description={
-                update
-                    ? "Suivez le mode de déploiement et l’entretien de votre installation."
-                    : "Consultez les informations relatives à la gestion de votre licence."
-            }
+            description="Consultez les informations relatives à la gestion de votre licence."
         >
             <SettingsSection
-                icon={update ? Wrench : ShieldCheck}
-                title={
-                    update ? "Maintenance administrée" : "Licence administrée"
-                }
+                icon={ShieldCheck}
+                title="Licence administrée"
                 description="Ce service est contrôlé par l’administrateur de l’installation."
             >
                 <div className="settings-status-card">
@@ -1166,9 +1265,7 @@ export function SettingsInfo() {
                             <i /> Installation opérationnelle
                         </span>
                         <h3>
-                            {update
-                                ? "Déploiement manuel sécurisé"
-                                : "Gestion centralisée"}
+                            Gestion centralisée
                         </h3>
                         <p>{p.message}</p>
                     </div>

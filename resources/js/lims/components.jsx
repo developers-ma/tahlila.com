@@ -9,7 +9,14 @@ import {
     Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { p, replacePage, statuses, checked } from "./data";
+import {
+    csrfFetch,
+    p,
+    refreshCsrfToken,
+    replacePage,
+    statuses,
+    checked,
+} from "./data";
 export function Button({
     children,
     href,
@@ -69,6 +76,7 @@ export function Form({
             form.querySelectorAll('input[type="file"]'),
         ).some((input) => input.files?.length);
         if (hasSelectedFile) {
+            await refreshCsrfToken();
             form.action = submitAction;
             window.HTMLFormElement.prototype.submit.call(form);
             return;
@@ -95,7 +103,7 @@ export function Form({
         }
 
         try {
-            const response = await fetch(submitAction, {
+            const response = await csrfFetch(submitAction, {
                 method: "POST",
                 body: formData,
                 credentials: "same-origin",
@@ -104,6 +112,10 @@ export function Form({
                     "X-Requested-With": "XMLHttpRequest",
                 },
             });
+            if (reload && response.ok) {
+                window.location.assign(response.url);
+                return;
+            }
             const isJson = response.headers
                 .get("content-type")
                 ?.includes("application/json");
@@ -179,7 +191,7 @@ export function Form({
             encType="multipart/form-data"
             ref={resolvedFormRef}
             className={className}
-            onSubmit={reload ? undefined : submit}
+            onSubmit={submit}
             {...props}
         >
             <input type="hidden" name="_token" value={p.csrf} />

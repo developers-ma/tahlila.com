@@ -19,7 +19,18 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TestController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/csrf-token', fn () => response()->json([
+    'token' => csrf_token(),
+]))->name('csrf.token');
+
+Route::get('/session/keep-alive', function (Request $request) {
+    $request->session()->put('_last_keep_alive', now()->timestamp);
+
+    return response()->noContent()->header('Cache-Control', 'no-store');
+})->name('session.keep-alive');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/prices', [PriceController::class, 'store'])->middleware('permission:catalog.manage')->name('prices.store');

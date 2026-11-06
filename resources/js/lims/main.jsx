@@ -21,13 +21,14 @@ import {
     LanguageEditor,
 } from "./Settings";
 import { Auth } from "./Auth";
+import { ErrorPage } from "./ErrorPage";
 import { StaffForm, StaffPage } from "./Staff";
 import { PatientPortal } from "./PatientPortal";
 import { Mailbox } from "./Mailbox";
 import { Chat } from "./Chat";
 function applyPageAppearance() {
-    document.documentElement.dir = p.dictionary?.dir === "rtl" ? "rtl" : "ltr";
-    document.title = `${p.title} · Tahlila`;
+    document.documentElement.dir = p.locale === "ar" ? "rtl" : "ltr";
+    document.title = `${t(p.title)} · Tahlila`;
     if (!p.theme) return;
     for (const [property, field] of Object.entries({
         "--green": "primary_color",
@@ -136,7 +137,50 @@ function SpaApplication() {
     const consumedPageStates = useRef(new Set());
     const [revision, setRevision] = useState(0);
     const [loading, setLoading] = useState(false);
-    const [loadError, setLoadError] = useState("");
+    const [loadError, setLoadError] = useState(null);
+
+    useEffect(() => {
+        let request = null;
+
+        const keepSessionAlive = () => {
+            if (document.visibilityState !== "visible") return;
+
+            request?.abort();
+            request = new AbortController();
+            fetch("/session/keep-alive", {
+                credentials: "same-origin",
+                cache: "no-store",
+                signal: request.signal,
+                headers: {
+                    Accept: "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            }).catch((error) => {
+                if (error.name !== "AbortError") {
+                    // A temporary connection failure should not interrupt the UI.
+                }
+            });
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") keepSessionAlive();
+        };
+
+        keepSessionAlive();
+        const interval = window.setInterval(keepSessionAlive, 4 * 60 * 1000);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("focus", keepSessionAlive);
+
+        return () => {
+            request?.abort();
+            window.clearInterval(interval);
+            document.removeEventListener(
+                "visibilitychange",
+                handleVisibilityChange,
+            );
+            window.removeEventListener("focus", keepSessionAlive);
+        };
+    }, []);
 
     useEffect(() => {
         const refresh = () => setRevision((value) => value + 1);
@@ -186,7 +230,7 @@ function SpaApplication() {
 
         const abort = new AbortController();
         setLoading(true);
-        setLoadError("");
+        setLoadError(null);
         fetch(
             `/api/lims${location.pathname === "/" ? "/" : location.pathname}${location.search}`,
             {
@@ -210,9 +254,9 @@ function SpaApplication() {
                 }
                 if (!response.ok) {
                     const body = await response.json().catch(() => ({}));
-                    throw new Error(
-                        body.message || "Cette page ne peut pas être chargée.",
-                    );
+                    const error = new Error(body.message || "");
+                    error.status = response.status;
+                    throw error;
                 }
                 return response.json();
             })
@@ -223,7 +267,9 @@ function SpaApplication() {
                 window.scrollTo({ top: 0, behavior: "auto" });
             })
             .catch((error) => {
-                if (error.name !== "AbortError") setLoadError(error.message);
+                if (error.name !== "AbortError") {
+                    setLoadError({ status: error.status || 500 });
+                }
             })
             .finally(() => {
                 if (!abort.signal.aborted) setLoading(false);
@@ -234,17 +280,14 @@ function SpaApplication() {
     return (
         <>
             {loading && <div className="spa-progress" role="progressbar" />}
-            {loadError && (
-                <div className="spa-load-error alert-inline" role="alert">
-                    {loadError}
-                    <button onClick={() => window.location.reload()}>
-                        Réessayer
-                    </button>
-                </div>
-            )}
+            {loadError && <ErrorPage {...loadError} />}
             <div
                 className={
-                    loading ? "spa-content spa-content-loading" : "spa-content"
+                    loadError
+                        ? "spa-content spa-content-error"
+                        : loading
+                          ? "spa-content spa-content-loading"
+                          : "spa-content"
                 }
                 onClickCapture={handleInternalLink}
             >

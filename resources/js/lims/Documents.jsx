@@ -17,7 +17,7 @@ import {
     ReceiptText,
     TestTube2,
 } from "lucide-react";
-import { p, statuses, money, date, name, checked, can } from "./data";
+import { csrfFetch, p, statuses, money, date, name, checked, can } from "./data";
 import { Button, Heading, Form, Field, Status } from "./components";
 export function PatientSummary() {
     return (
@@ -682,7 +682,7 @@ export function ResultNotification() {
                     onClick={async () => {
                         setBusy(true);
                         try {
-                            const res = await fetch("/send-test-result-email", {
+                            const res = await csrfFetch("/send-test-result-email", {
                                 method: "POST",
                                 headers: {
                                     "Content-Type": "application/json",
@@ -823,7 +823,7 @@ export function BarcodePage() {
         setPrintSaving(true);
         setPrintError("");
         try {
-            const response = await fetch(
+            const response = await csrfFetch(
                 `/test/barcodes/${p.record.id}/print-settings`,
                 {
                     method: "POST",
@@ -862,7 +862,7 @@ export function BarcodePage() {
         setSaveState("saving");
         try {
             const form = event.currentTarget;
-            const response = await fetch(form.action, {
+            const response = await csrfFetch(form.action, {
                 method: "POST",
                 credentials: "same-origin",
                 headers: {

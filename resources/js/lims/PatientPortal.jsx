@@ -19,6 +19,7 @@ import {
 import { t } from "./i18n";
 import { date, money, p, statuses } from "./data";
 import { Button, Field, Form, Status } from "./components";
+import { AuthVisual } from "./AuthVisual";
 
 function PatientBrand() {
     return (
@@ -69,37 +70,15 @@ function PatientAuth() {
 
     return (
         <div className="patient-auth-shell">
-            <section className="patient-auth-story">
-                <PatientBrand />
-                <div>
-                    <span className="patient-auth-pill">
-                        <ShieldCheck size={15} />
-                        {t("Données médicales protégées")}
-                    </span>
-                    <h1>
-                        {t("Vos analyses.")}
-                        <br />
-                        {t("Claires, accessibles,")}
-                        <br />
-                        {t("quand vous en avez besoin.")}
-                    </h1>
-                    <p>
-                        {t(
-                            "Un accès simple et confidentiel aux informations transmises par votre laboratoire.",
-                        )}
-                    </p>
-                </div>
-                <div className="patient-auth-trust">
-                    <span>
-                        <LockKeyhole size={16} /> Connexion sécurisée
-                    </span>
-                    <span>
-                        <CheckCircle2 size={16} /> Résultats validés
-                    </span>
-                </div>
-            </section>
+            <AuthVisual patient />
             <main className="patient-auth-main">
                 <div className="patient-auth-form">
+                    <a className="brand auth-form-brand" href="/patient/login">
+                        <FlaskConical size={28} />
+                        <b>
+                            tahlila<span>lab workspace</span>
+                        </b>
+                    </a>
                     {mode === "login" && (
                         <div
                             className="auth-persona-switch patient-switch"
@@ -109,21 +88,19 @@ function PatientAuth() {
                                 <UserRound size={17} />
                                 <span>
                                     <strong>{t("Personnel")}</strong>
-                                    <small>{t("Espace laboratoire")}</small>
                                 </span>
                             </a>
                             <a className="active" href="/patient/login">
                                 <HeartPulse size={17} />
                                 <span>
                                     <strong>{t("Patient")}</strong>
-                                    <small>{t("Mes résultats")}</small>
                                 </span>
                             </a>
                         </div>
                     )}
-                    <span className="eyebrow">{t(content.eyebrow)}</span>
+
                     <h2>{t(content.title)}</h2>
-                    <p>{t(content.description)}</p>
+                    {mode !== "login" && <p>{t(content.description)}</p>}
                     {p.flash && (
                         <div
                             className="notice"
@@ -154,11 +131,11 @@ function PatientAuth() {
                         <Field
                             field={{
                                 name: "email",
-                                label: "Adresse e-mail",
+                                label: t("Adresse e-mail"),
                                 type: "email",
                                 required: true,
                                 autoComplete: "email",
-                                placeholder: "votre@email.com",
+                                placeholder: t("Adresse e-mail"),
                             }}
                             record={{ email: p.email }}
                         />
@@ -168,8 +145,8 @@ function PatientAuth() {
                                     name: "password",
                                     label:
                                         mode === "reset-password"
-                                            ? "Nouveau mot de passe"
-                                            : "Mot de passe",
+                                            ? t("Nouveau mot de passe")
+                                            : t("Mot de passe"),
                                     type: "password",
                                     required: true,
                                     autoComplete:
@@ -183,7 +160,7 @@ function PatientAuth() {
                             <Field
                                 field={{
                                     name: "password_confirmation",
-                                    label: "Confirmer le mot de passe",
+                                    label: t("Confirmer le mot de passe"),
                                     type: "password",
                                     required: true,
                                     autoComplete: "new-password",
@@ -194,8 +171,8 @@ function PatientAuth() {
                             {mode === "login"
                                 ? t("Se connecter")
                                 : mode === "forgot-password"
-                                  ? t("Envoyer le lien sécurisé")
-                                  : t("Enregistrer et continuer")}
+                                    ? t("Envoyer le lien sécurisé")
+                                    : t("Enregistrer et continuer")}
                             <ArrowRight size={17} />
                         </Button>
                     </Form>
@@ -212,6 +189,9 @@ function PatientAuth() {
                             {t("Retour à la connexion")}
                         </a>
                     )}
+                    <span className="auth-open-source-badge">
+                        &lt;/&gt; {t("Open source")} · {t("Web & Desktop")}
+                    </span>
                 </div>
             </main>
         </div>
@@ -332,7 +312,7 @@ function PatientDashboard() {
                                             <CalendarDays size={13} />
                                             {date(
                                                 order.prelevement_date ||
-                                                    order.created_at,
+                                                order.created_at,
                                             )}
                                         </small>
                                     </div>

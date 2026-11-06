@@ -1,219 +1,95 @@
 import { t } from "./i18n";
-import { useState } from "react";
-import {
-    Activity,
-    ArrowDownLeft,
-    ArrowRight,
-    Check,
-    ClipboardList,
-    FileText,
-    FlaskConical,
-    Users,
-} from "lucide-react";
-import { can, p, money } from "./data";
-import { Heading } from "./components";
+import { useMemo, useState } from "react";
+import { ArrowRight, ChevronRight, ClipboardList, Coins, FileCheck2, FlaskConical, Printer, TrendingUp, UserPlus, Users, Zap } from "lucide-react";
+import { can, money, p } from "./data";
 import { OrderTable } from "./Resources";
+
+const compact = (value) => Number(value || 0).toLocaleString("fr-FR", { maximumFractionDigits: 0 });
+
 export function Dashboard() {
     return (
-        <>
-            <Heading />
-            <section className="overview">
-                <div className="balance-card">
-                    <div className="card-top">
-                        <span>{t("Votre activit\xE9, en un regard")}</span>
-                        <Activity size={22} />
-                    </div>
-                    <div className="large-number">
-                        {p.stats.patients.toLocaleString("fr-FR")}
-                        <span>{t("patients enregistr\xE9s")}</span>
-                    </div>
-                    <div className="balance-footer">
-                        <span>
-                            <ArrowDownLeft size={17} />
-                            {t("Encaissements cumul\xE9s")}
-                        </span>
-                        <strong>{money(p.stats.paid)}</strong>
-                    </div>
-                </div>
-                <div className="workflow-card">
-                    <div className="section-heading">
-                        <h2>{t("Le fil de votre laboratoire")}</h2>
-                        <span className="muted">{t("En temps r\xE9el")}</span>
-                    </div>
-                    <div className="workflow-counts">
-                        {[
-                            ["waiting", "1", t("\xC0 pr\xE9lever")],
-                            ["processing", "2", t("En traitement")],
-                            ["ready", "3", t("R\xE9sultats pr\xEAts")],
-                        ].map(([key, status, label]) => (
-                            <a
-                                key={key}
-                                href={
-                                    can("orders.manage")
-                                        ? `/tests?status=${status}`
-                                        : undefined
-                                }
-                            >
-                                <span className={`round-icon status-${status}`}>
-                                    {status === "3" ? (
-                                        <Check />
-                                    ) : (
-                                        <FlaskConical />
-                                    )}
-                                </span>
-                                <strong>{p.stats[key]}</strong>
-                                <span>{label}</span>
-                                <ArrowRight size={17} />
-                            </a>
-                        ))}
-                    </div>
-                </div>
+        <div className="dashboard-v2">
+            <header className="dashboard-heading">
+                <div><h1>{t("Tableau de bord")}</h1><p>{t("Votre laboratoire, en un regard.")}</p></div>
+                <select aria-label={t("Période du tableau de bord")} defaultValue="30">
+                    <option value="30">{t("30 derniers jours")}</option>
+                    <option value="90">{t("90 derniers jours")}</option>
+                    <option value="365">{t("Cette année")}</option>
+                </select>
+            </header>
+            <section className="dashboard-kpis" aria-label={t("Indicateurs clés")}>
+                <Kpi icon={Users} tone="green" label="Patients" value={p.stats.patients} />
+                <Kpi icon={FlaskConical} tone="blue" label="Analyses" value={p.stats.analyses} />
+                <Kpi icon={FileCheck2} tone="purple" label="Résultats" value={p.stats.ready} />
+                <Kpi icon={Coins} tone="amber" label="Chiffre d’affaires" value={money(p.stats.revenue)} wide />
             </section>
-            <div className="quick-actions">
-                {can("patients.manage") && (
-                    <a href="/patients/create">
-                        <Users />
-                        <span>
-                            <strong>{t("Accueillir un patient")}</strong>
-                            <small>
-                                {t("Cr\xE9er sa fiche et son dossier")}
-                            </small>
-                        </span>
-                        <ArrowRight />
-                    </a>
-                )}
-                {can("results.manage") && (
-                    <a href="/results?status=2">
-                        <ClipboardList />
-                        <span>
-                            <strong>{t("Saisir les r\xE9sultats")}</strong>
-                            <small>
-                                {t("Poursuivre les analyses en cours")}
-                            </small>
-                        </span>
-                        <ArrowRight />
-                    </a>
-                )}
-                {can("invoices.manage") && (
-                    <a href="/invoices">
-                        <FileText />
-                        <span>
-                            <strong>{t("Suivre les r\xE8glements")}</strong>
-                            <small>{money(p.stats.balance)} à recevoir</small>
-                        </span>
-                        <ArrowRight />
-                    </a>
-                )}
-            </div>
-            <ActivityChart />
-            <section className="panel">
-                <div className="section-heading">
-                    <div>
-                        <h2>{t("Les derniers dossiers")}</h2>
-                        <p>
-                            {t(
-                                "Une vue claire de l\u2019activit\xE9 r\xE9cente.",
-                            )}
-                        </p>
+            <section className="dashboard-primary-grid"><ActivityChart /><QuickActions /></section>
+            <section className="dashboard-secondary-grid">
+                <section className="panel dashboard-recent">
+                    <div className="dashboard-card-heading">
+                        <h2>{t("Derniers dossiers")}</h2>
+                        {can("orders.manage") && <a href="/tests">{t("Voir tout")} <ArrowRight size={16} /></a>}
                     </div>
-                    {can("orders.manage") && (
-                        <a className="text-action" href="/tests">
-                            {t("Tous les dossiers")}
-                            <ArrowRight size={16} />
-                        </a>
-                    )}
-                </div>
-                <OrderTable mode="dashboard" />
+                    <OrderTable mode="dashboard" />
+                </section>
+                <a className="dashboard-performance" href="/results">
+                    <span><strong>{t("Performance du laboratoire")}</strong><small>{t("Suivre les résultats")}</small></span>
+                    <i><ArrowRight /></i>
+                </a>
             </section>
-        </>
+        </div>
     );
 }
-function ActivityChart() {
-    const [period, setPeriod] = useState("month");
-    const [metric, setMetric] = useState("revenue");
-    const [offset, setOffset] = useState(0);
-    const all = p.analytics?.[period] || [];
-    const end = Math.max(0, all.length - offset);
-    const rows = all.slice(Math.max(0, end - 12), end);
-    const maximum = Math.max(1, ...rows.map((row) => Number(row[metric])));
+
+function Kpi({ icon: Icon, tone, label, value, wide = false }) {
     return (
-        <section className="panel">
-            <div className="section-heading">
-                <div>
-                    <h2>{t("Votre activit\xE9 dans le temps")}</h2>
-                    <p>
-                        {p.stats.analyses} analyses · {p.stats.stock}{" "}
-                        consommables · {money(p.stats.revenue)} de dossiers
-                    </p>
+        <article className={`dashboard-kpi dashboard-kpi-${tone}`}>
+            <span className="dashboard-kpi-icon"><Icon /></span>
+            <span className="dashboard-kpi-copy"><small>{t(label)}</small><strong className={wide ? "dashboard-kpi-wide" : ""}>{typeof value === "number" ? compact(value) : value}</strong></span>
+            <span className="dashboard-kpi-trend"><TrendingUp size={13} /> {t("Activité")}</span>
+        </article>
+    );
+}
+
+function QuickActions() {
+    const actions = [
+        can("patients.manage") && [UserPlus, "Nouveau patient", "/patients/create", "green"],
+        can("orders.manage") && [FlaskConical, "Nouvelle analyse", "/new-test", "blue"],
+        can("results.manage") && [ClipboardList, "Saisir les résultats", "/results?status=2", "purple"],
+        can("results.manage") && [Printer, "Imprimer un rapport", "/results", "slate"],
+    ].filter(Boolean);
+    return (
+        <section className="panel dashboard-actions">
+            <div className="dashboard-card-heading"><h2><Zap size={20} /> {t("Actions rapides")}</h2></div>
+            <div>{actions.map(([Icon, label, href, tone]) => <a href={href} key={label}><span className={`dashboard-action-icon ${tone}`}><Icon /></span><strong>{t(label)}</strong><ChevronRight size={18} /></a>)}</div>
+        </section>
+    );
+}
+
+function ActivityChart() {
+    const [metric, setMetric] = useState("count");
+    const rows = (p.analytics?.day?.length ? p.analytics.day : p.analytics?.month || []).slice(-10);
+    const values = rows.map((row) => Number(row[metric] || 0));
+    const max = Math.max(1, ...values);
+    const points = useMemo(() => values.map((value, index) => [rows.length <= 1 ? 50 : (index / (rows.length - 1)) * 100, 92 - (value / max) * 76]), [metric, rows.length, max, values.join(",")]);
+    const line = points.map(([x, y]) => `${x},${y}`).join(" ");
+    const area = points.length ? `0,100 ${line} 100,100` : "";
+    const latest = values.at(-1) || 0;
+    const formatValue = (value) => metric === "revenue" ? money(value) : compact(value);
+    return (
+        <section className="panel dashboard-chart-card">
+            <div className="dashboard-card-heading">
+                <h2>{metric === "count" ? t("Analyses dans le temps") : t("Revenus dans le temps")}</h2>
+                <div className="dashboard-chart-tabs"><button type="button" aria-pressed={metric === "count"} className={metric === "count" ? "active" : ""} onClick={() => setMetric("count")}>{t("Analyses")}</button><button type="button" aria-pressed={metric === "revenue"} className={metric === "revenue" ? "active" : ""} onClick={() => setMetric("revenue")}>{t("Revenus")}</button></div>
+            </div>
+            {rows.length ? <div className="dashboard-line-chart" role="img" aria-label={t("Graphique d’activité")}>
+                <div className="dashboard-chart-scale" aria-hidden="true"><span>{formatValue(max)}</span><span>{formatValue(max / 2)}</span><span>0</span></div>
+                <div className="dashboard-chart-canvas">
+                    <span className="dashboard-chart-current">{formatValue(latest)}</span>
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="dashboardArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#91d95e" stopOpacity=".42" /><stop offset="1" stopColor="#91d95e" stopOpacity=".04" /></linearGradient></defs><polygon points={area} fill="url(#dashboardArea)" /><polyline points={line} fill="none" stroke="#247414" strokeWidth="2" vectorEffect="non-scaling-stroke" />{points.map(([x, y], index) => <circle key={rows[index].label} cx={x} cy={y} r="1.8" fill="#247414" stroke="#fff" strokeWidth="1" vectorEffect="non-scaling-stroke" />)}</svg>
+                    <div className="dashboard-chart-labels" style={{ gridTemplateColumns: `repeat(${rows.length}, minmax(0, 1fr))` }}>{rows.map((row) => <small key={row.label}>{row.label}</small>)}</div>
                 </div>
-                <div className="chart-filters">
-                    <select
-                        aria-label="Indicateur"
-                        value={metric}
-                        onChange={(e) => setMetric(e.target.value)}
-                    >
-                        <option value="revenue">
-                            {t("Montant des dossiers")}
-                        </option>
-                        <option value="count">{t("Nombre de dossiers")}</option>
-                    </select>
-                    <select
-                        aria-label="Période"
-                        value={period}
-                        onChange={(e) => {
-                            setPeriod(e.target.value);
-                            setOffset(0);
-                        }}
-                    >
-                        <option value="day">{t("Jours")}</option>
-                        <option value="month">{t("Mois")}</option>
-                        <option value="year">{t("Ann\xE9es")}</option>
-                    </select>
-                </div>
-            </div>
-            <div
-                className="activity-chart"
-                role="img"
-                aria-label={`${metric === "revenue" ? t("Montant") : "Nombre"} des dossiers par période`}
-            >
-                {rows.length ? (
-                    rows.map((row) => (
-                        <div className="chart-column" key={row.label}>
-                            <span>
-                                {metric === "revenue"
-                                    ? money(row.revenue)
-                                    : row.count}
-                            </span>
-                            <div className="chart-track">
-                                <div
-                                    style={{
-                                        height: `${Math.max(Number(row[metric]) ? 3 : 0, (Number(row[metric]) / maximum) * 100)}%`,
-                                    }}
-                                />
-                            </div>
-                            <small>{row.label}</small>
-                        </div>
-                    ))
-                ) : (
-                    <p>Aucune activité enregistrée.</p>
-                )}
-            </div>
-            <div className="pagination">
-                <button
-                    className="icon-button"
-                    disabled={end <= 12}
-                    onClick={() => setOffset(offset + 12)}
-                >
-                    ← Périodes précédentes
-                </button>
-                <button
-                    className="icon-button"
-                    disabled={!offset}
-                    onClick={() => setOffset(Math.max(0, offset - 12))}
-                >
-                    Périodes suivantes →
-                </button>
-            </div>
+            </div> : <div className="dashboard-chart-empty">{t("Aucune activité enregistrée.")}</div>}
         </section>
     );
 }
