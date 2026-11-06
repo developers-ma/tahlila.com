@@ -5,6 +5,7 @@ import {
     ArrowUpRight,
     BellRing,
     Building2,
+    Camera,
     Check,
     CheckCircle2,
     ClipboardList,
@@ -666,17 +667,7 @@ export function SettingsPage() {
     return (
         <>
             <Heading />
-            <section className="settings-overview panel">
-                <div>
-                    <span className="eyebrow">CENTRE DE CONTRÔLE</span>
-                    <h2>Une configuration claire, une équipe plus efficace.</h2>
-                    <p>
-                        Centralisez l’identité, les paiements, la messagerie et
-                        la sécurité de votre laboratoire.
-                    </p>
-                </div>
-                <ShieldCheck size={54} strokeWidth={1.4} />
-            </section>
+
             <div className="settings-grid">
                 {settingsItems.map((item) => {
                     const Icon = item.icon;
@@ -701,6 +692,10 @@ export function SettingsPage() {
 }
 
 export function Profile() {
+    const [photoPreview, setPhotoPreview] = useState(p.user?.avatarUrl || "");
+    const [removePhoto, setRemovePhoto] = useState(false);
+    const [photoInputKey, setPhotoInputKey] = useState(0);
+
     return (
         <SettingsShell description="Gérez les informations de votre compte et protégez votre accès au laboratoire.">
             <div className="settings-sections">
@@ -710,6 +705,74 @@ export function Profile() {
                     description="Identité utilisée dans l’application et les traces d’activité."
                 >
                     <Form action="/profile" method="PATCH">
+                        <div className="profile-photo-editor">
+                            <span className="profile-photo-preview">
+                                {photoPreview ? (
+                                    <img
+                                        src={photoPreview}
+                                        alt={t("Photo de profil")}
+                                    />
+                                ) : (
+                                    p.user?.name?.slice(0, 2).toUpperCase()
+                                )}
+                            </span>
+                            <div>
+                                <strong>{t("Photo de profil")}</strong>
+                                <p>
+                                    {t(
+                                        "JPG, PNG ou WebP, 2 Mo maximum. Cette photo apparaît dans la navigation.",
+                                    )}
+                                </p>
+                                <div className="profile-photo-actions">
+                                    <label className="button secondary">
+                                        <Camera size={16} />
+                                        {t(
+                                            photoPreview
+                                                ? "Remplacer la photo"
+                                                : "Ajouter une photo",
+                                        )}
+                                        <input
+                                            key={photoInputKey}
+                                            type="file"
+                                            name="avatar"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            onChange={(event) => {
+                                                const file =
+                                                    event.target.files?.[0];
+                                                if (file) {
+                                                    setPhotoPreview(
+                                                        URL.createObjectURL(
+                                                            file,
+                                                        ),
+                                                    );
+                                                    setRemovePhoto(false);
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                    {photoPreview && (
+                                        <button
+                                            className="profile-photo-remove"
+                                            type="button"
+                                            onClick={() => {
+                                                setPhotoPreview("");
+                                                setRemovePhoto(true);
+                                                setPhotoInputKey(
+                                                    (value) => value + 1,
+                                                );
+                                            }}
+                                        >
+                                            {t("Supprimer la photo")}
+                                        </button>
+                                    )}
+                                </div>
+                                <input
+                                    type="hidden"
+                                    name="remove_avatar"
+                                    value={removePhoto ? "1" : "0"}
+                                />
+                            </div>
+                        </div>
                         <div className="settings-fields">
                             <Field
                                 field={{

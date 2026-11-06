@@ -7,6 +7,7 @@ import {
     SlidersHorizontal,
     Barcode,
     Package,
+    MessageCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 export interface Patient {
@@ -159,6 +160,12 @@ export const navigationSections: {
                 href: "/stocks",
                 icon: Package,
                 permission: "inventory.manage",
+            },
+            {
+                label: "Chat interne",
+                href: "/chat",
+                icon: MessageCircle,
+                permission: "chat.use",
             },
             {
                 label: "Équipe",

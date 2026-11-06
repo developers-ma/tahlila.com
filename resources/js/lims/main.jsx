@@ -10,7 +10,7 @@ import { Heading, Empty } from "./components";
 import { Dashboard } from "./Dashboard";
 import { ResourceList, ResourceForm } from "./ResourceForms";
 import { ListPage } from "./Resources";
-import { OrderForm } from "./Orders";
+import { OrderForm, PatientSelector } from "./Orders";
 import { Results, Invoice, Report, BarcodePage } from "./Documents";
 import {
     SettingsPage,
@@ -24,6 +24,7 @@ import { Auth } from "./Auth";
 import { StaffForm, StaffPage } from "./Staff";
 import { PatientPortal } from "./PatientPortal";
 import { Mailbox } from "./Mailbox";
+import { Chat } from "./Chat";
 function applyPageAppearance() {
     document.documentElement.dir = p.dictionary?.dir === "rtl" ? "rtl" : "ltr";
     document.title = `${p.title} · Tahlila`;
@@ -65,6 +66,8 @@ function Content() {
             return <ListPage />;
         case "order":
             return <OrderForm />;
+        case "patient-select":
+            return <PatientSelector />;
         case "result":
             return <Results />;
         case "invoice":
@@ -115,6 +118,8 @@ function Content() {
             );
         case "staff":
             return <StaffPage />;
+        case "chat":
+            return <Chat />;
         case "email":
             return <Mailbox />;
         case "staff.create":

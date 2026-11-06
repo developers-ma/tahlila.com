@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\ChatMessage;
 use App\Models\ColorSetting;
 use App\Models\EmailSetting;
 use App\Models\Group;
@@ -78,8 +79,9 @@ class LimsPageController extends Controller
         $dictionary = $dictionaryPath && File::exists($dictionaryPath) ? json_decode(File::get($dictionaryPath), true) : [];
         $currentUser = $request->user()?->loadMissing('role');
         $page = ['screen' => $screen, 'locale' => $locale, 'dictionary' => $dictionary, 'title' => 'Laboratoire',
-            'user' => $currentUser ? [...$currentUser->only('name', 'email'), 'role' => $currentUser->role?->name] : null,
+            'user' => $currentUser ? [...$currentUser->only('id', 'name', 'email'), 'role' => $currentUser->role?->name, 'avatarUrl' => $currentUser->profilePhotoUrl()] : null,
             'permissions' => $currentUser?->permissionKeys() ?? [], 'isAdministrator' => $currentUser?->isAdministrator() ?? false,
+            'unreadChatCount' => $currentUser ? ChatMessage::where('recipient_id', $currentUser->id)->whereNull('read_at')->count() : 0,
             'patientPortalEnabled' => (bool) Setting::value('patient_portal_enabled'),
             'csrf' => csrf_token(), 'errors' => collect(session('errors')?->getBags() ?? [])->flatMap(fn ($bag) => $bag->toArray())->all(),
             'old' => collect($request->old())->except(['password', 'password_confirmation', 'current_password', 'mail_password', '_token'])->all(),
@@ -178,11 +180,17 @@ class LimsPageController extends Controller
             $page['lines'] = $test ? DB::table('test_for_patients as lines')->leftJoin('prices', 'prices.id', '=', 'lines.price_id')->leftJoin('groups', 'groups.id', '=', 'lines.group_id')->leftJoin('categories', 'categories.id', '=', 'lines.category_id')->where('lines.test_id', $test->id)->select('prices.*', 'lines.*', 'groups.group_name', 'categories.category_name')->get() : [];
             $page['payment'] = PaymentMethod::first();
             if ($screen === 'order') {
-                $page['patients'] = Patient::orderBy('lastname')->get(['id', 'firstname', 'lastname', 'id_card']);
+                $page['patients'] = Patient::orderBy('lastname')->orderBy('firstname')
+                    ->get(['id', 'firstname', 'lastname', 'id_card', 'phone', 'email']);
                 $page['selectedPatient'] = $test?->patient_id ?? $request->query('patient');
-                $page['catalogue'] = Price::with(['categories', 'groups'])->orderBy('test_name')->get();
-                $page['categories'] = Category::all();
-                $page['groups'] = Group::all();
+                if (! $test && ! $page['selectedPatient']) {
+                    $page['screen'] = 'patient-select';
+                    $page['title'] = 'Sélectionner un patient';
+                } else {
+                    $page['catalogue'] = Price::with(['categories', 'groups'])->orderBy('test_name')->get();
+                    $page['categories'] = Category::all();
+                    $page['groups'] = Group::all();
+                }
             }
             if ($test) {
                 $generator = new BarcodeGeneratorSVG;
@@ -247,14 +255,35 @@ class LimsPageController extends Controller
                 $page['title'] = 'Licence';
                 $page['message'] = 'Aucun service de gestion de licence n’est configuré dans cette application. Contactez votre administrateur pour les informations de licence.';
             }
+        } elseif ($screen === 'chat') {
+            $page['title'] = 'Chat interne';
+            $users = User::with('role:id,name')->whereKeyNot($currentUser->id)->orderBy('name')->get(['id', 'role_id', 'name', 'email', 'profile_photo_path']);
+            $unread = ChatMessage::where('recipient_id', $currentUser->id)->whereNull('read_at')->selectRaw('sender_id, COUNT(*) as total')->groupBy('sender_id')->pluck('total', 'sender_id');
+            $page['chatUsers'] = $users->map(function (User $user) use ($currentUser, $unread): array {
+                $last = ChatMessage::where(fn ($query) => $query->where('sender_id', $currentUser->id)->where('recipient_id', $user->id))
+                    ->orWhere(fn ($query) => $query->where('sender_id', $user->id)->where('recipient_id', $currentUser->id))->latest('id')->first();
+
+                return [...$user->only('id', 'name', 'email'), 'role' => $user->role?->name, 'avatarUrl' => $user->profilePhotoUrl(), 'unreadCount' => (int) ($unread[$user->id] ?? 0), 'lastMessage' => $last?->body, 'lastMessageAt' => $last?->created_at?->toAtomString()];
+            })->values();
+            $selectedId = $request->integer('user') ?: ($page['chatUsers']->first()['id'] ?? null);
+            $selected = $users->firstWhere('id', $selectedId);
+            $page['chatSelectedUser'] = $selected ? [...$selected->only('id', 'name', 'email'), 'role' => $selected->role?->name, 'avatarUrl' => $selected->profilePhotoUrl()] : null;
+            if ($selected) {
+                ChatMessage::where('sender_id', $selected->id)->where('recipient_id', $currentUser->id)->whereNull('read_at')->update(['read_at' => now()]);
+                $page['chatMessages'] = ChatMessage::where(fn ($query) => $query->where('sender_id', $currentUser->id)->where('recipient_id', $selected->id))
+                    ->orWhere(fn ($query) => $query->where('sender_id', $selected->id)->where('recipient_id', $currentUser->id))->with('attachments')->latest('id')->limit(150)->get()->reverse()->values();
+            } else {
+                $page['chatMessages'] = [];
+            }
         } elseif ($screen === 'staff') {
             $page['title'] = 'Équipe du laboratoire';
             $page['users'] = User::with('role:id,name,slug')->orderBy('name')
-                ->get(['id', 'role_id', 'name', 'email', 'permissions', 'created_at'])
+                ->get(['id', 'role_id', 'name', 'email', 'permissions', 'profile_photo_path', 'created_at'])
                 ->map(function (User $user): array {
                     $data = $user->only('id', 'role_id', 'name', 'email', 'created_at');
                     $data['role'] = $user->role?->only('id', 'name', 'slug');
                     $data['permissions'] = $user->permissionKeys();
+                    $data['avatarUrl'] = $user->profilePhotoUrl();
 
                     return $data;
                 });

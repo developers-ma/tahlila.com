@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ColorSettingController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\EmailSettingController;
@@ -48,6 +49,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/email/messages/{uid}/flag', [EmailController::class, 'flag'])->whereNumber('uid')->middleware('permission:email.send')->name('email.messages.flag');
     Route::get('/email/messages/{uid}/attachments/{part}', [EmailController::class, 'attachment'])->whereNumber('uid')->where('part', '[0-9.]+')->middleware('permission:email.send')->name('email.attachments.download');
     Route::post('/send-test-result-email', [EmailController::class, 'sendTestResultEmail'])->middleware('permission:email.send')->name('send.email.results');
+    Route::post('/chat/messages', [ChatController::class, 'store'])->middleware('permission:chat.use')->name('chat.messages.store');
+    Route::get('/api/chat/conversation/{user}', [ChatController::class, 'conversation'])->middleware('permission:chat.use')->name('chat.conversation');
+    Route::get('/api/chat/unread', [ChatController::class, 'unread'])->middleware('permission:chat.use')->name('chat.unread');
+    Route::get('/chat/attachments/{attachment}', [ChatController::class, 'attachment'])->middleware('permission:chat.use')->name('chat.attachments.download');
 
     Route::post('/setting/payment', [SettingController::class, 'payment'])->middleware('permission:settings.manage')->name('settings.payment.store');
     Route::post('/setting/colors', [ColorSettingController::class, 'update'])->middleware('permission:settings.manage')->name('settings.colors.update');

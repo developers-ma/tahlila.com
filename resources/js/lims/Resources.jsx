@@ -1,5 +1,5 @@
 import { t } from "./i18n";
-import { ArrowUpRight, Plus } from "lucide-react";
+import { ArrowUpRight, Barcode, Pencil, Plus, ReceiptText } from "lucide-react";
 import { can, p, money, date, name } from "./data";
 import {
     Button,
@@ -75,26 +75,33 @@ export function OrderTable({ rows = p.rows, mode = p.screen }) {
                                             : row.total_price,
                                     )}
                                 </td>
-                                <td>
+                                <td className="right">
                                     <div className="row-actions">
                                         {recordHref(row) && (
                                             <a
-                                                className="text-action"
+                                                className="table-action table-action-primary"
                                                 href={recordHref(row)}
                                             >
+                                                {mode === "invoices" ? (
+                                                    <ReceiptText size={15} />
+                                                ) : mode === "all-barcodes" ? (
+                                                    <Barcode size={15} />
+                                                ) : (
+                                                    <ArrowUpRight size={15} />
+                                                )}
                                                 {mode === "invoices"
                                                     ? t("Facture")
                                                     : mode === "all-barcodes"
                                                       ? t("Pr\xE9lever")
-                                                      : t("Ouvrir")}{" "}
-                                                <ArrowUpRight size={15} />
+                                                      : t("Ouvrir")}
                                             </a>
                                         )}
                                         {can("orders.manage") && (
                                             <a
                                                 href={`/tests/${row.id}/edit`}
-                                                className="subtle"
+                                                className="table-action"
                                             >
+                                                <Pencil size={14} />
                                                 {t("Modifier")}
                                             </a>
                                         )}

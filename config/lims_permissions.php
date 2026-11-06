@@ -10,6 +10,7 @@ return [
         'invoices.manage' => ['label' => 'Gérer les factures et règlements', 'group' => 'Laboratoire'],
         'catalog.manage' => ['label' => 'Gérer les tests, groupes et catégories', 'group' => 'Gestion'],
         'inventory.manage' => ['label' => 'Gérer les stocks', 'group' => 'Gestion'],
+        'chat.use' => ['label' => 'Utiliser le chat interne', 'group' => 'Gestion'],
         'staff.manage' => ['label' => 'Gérer les utilisateurs et permissions', 'group' => 'Administration'],
         'email.send' => ['label' => 'Envoyer des messages', 'group' => 'Administration'],
         'settings.manage' => ['label' => 'Gérer les paramètres du laboratoire', 'group' => 'Administration'],
@@ -27,6 +28,7 @@ return [
             'permissions' => [
                 'dashboard.view', 'patients.manage', 'orders.manage',
                 'collection.manage', 'results.manage', 'inventory.manage',
+                'chat.use',
             ],
         ],
         'reception' => [
@@ -35,6 +37,7 @@ return [
             'permissions' => [
                 'dashboard.view', 'patients.manage', 'orders.manage',
                 'collection.manage', 'invoices.manage',
+                'chat.use',
             ],
         ],
     ],

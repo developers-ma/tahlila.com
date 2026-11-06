@@ -113,6 +113,50 @@ for (const page of pages) {
             "automatic search must preserve focus in the input",
         );
     }
+    if (page.screen === "patient-select") {
+        const search = dom.window.document.querySelector(
+            '.patient-picker-search input[type="search"]',
+        );
+        assert.ok(search, "patient selector: missing instant search input");
+        assert.equal(
+            dom.window.document.querySelectorAll(".patient-picker-row").length,
+            page.patients.length,
+            "patient selector: complete patient list is missing",
+        );
+        assert.ok(
+            dom.window.document.querySelector(
+                `.patient-picker-row[href="/tests/create?patient=${page.patients[0].id}"]`,
+            ),
+            "patient selector: patient does not open the order form",
+        );
+        search.focus();
+        Object.getOwnPropertyDescriptor(
+            dom.window.HTMLInputElement.prototype,
+            "value",
+        ).set.call(search, "__patient_not_found__");
+        search.dispatchEvent(
+            new dom.window.Event("input", {
+                bubbles: true,
+                cancelable: true,
+            }),
+        );
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        assert.equal(
+            dom.window.document.querySelectorAll(".patient-picker-row").length,
+            0,
+            "patient selector: search does not filter automatically",
+        );
+        assert.equal(
+            dom.window.document.activeElement,
+            search,
+            "patient selector: search must keep keyboard focus",
+        );
+        assert.equal(
+            dom.window.location.search,
+            "",
+            "patient selector: local search must not modify the URL",
+        );
+    }
     if (
         !page.screen.startsWith("auth.") &&
         !page.screen.startsWith("patient.")
@@ -121,6 +165,29 @@ for (const page of pages) {
             dom.window.document.querySelector("nav"),
             `${page.path}: missing navigation`,
         );
+        assert.equal(
+            dom.window.document.querySelector(".topbar .secure"),
+            null,
+            `${page.path}: secure workspace label must not be rendered in the topbar`,
+        );
+        if (page.permissions?.includes("chat.use")) {
+            assert.ok(
+                dom.window.document.querySelector('.topbar a[href="/chat"]'),
+                `${page.path}: chat notification icon is missing from the topbar`,
+            );
+            const managementLinks = [
+                ...dom.window.document.querySelectorAll(
+                    '.nav-section a[href="/chat"], .nav-section a[href="/staff"]',
+                ),
+            ];
+            if (managementLinks.length === 2) {
+                assert.equal(
+                    managementLinks[0].getAttribute("href"),
+                    "/chat",
+                    `${page.path}: chat link must appear before staff`,
+                );
+            }
+        }
         assert.equal(
             dom.window.document.querySelectorAll(".nav-section").length,
             3,
@@ -486,6 +553,54 @@ for (const page of pages) {
             assert.ok(
                 dom.window.document.querySelector(".mailbox-shell"),
                 "mailbox: synchronized workspace is missing",
+            );
+        }
+    }
+    if (page.screen === "profile") {
+        assert.ok(
+            dom.window.document.querySelector('input[name="avatar"]'),
+            "profile: photo upload control is missing",
+        );
+        assert.ok(
+            dom.window.document.querySelector(".profile-photo-preview"),
+            "profile: photo preview is missing",
+        );
+    }
+    if (page.screen === "staff") {
+        assert.ok(
+            dom.window.document.querySelector(
+                '.staff-search input[type="search"]',
+            ),
+            "staff: instant search input is missing",
+        );
+        assert.equal(
+            dom.window.document.querySelectorAll(".staff-table tbody tr")
+                .length,
+            page.users.length,
+            "staff: complete team roster is missing",
+        );
+    }
+    if (page.screen === "chat") {
+        assert.ok(
+            dom.window.document.querySelector(".chat-shell"),
+            "chat: workspace is missing",
+        );
+        assert.equal(
+            dom.window.document.querySelectorAll(".chat-contacts nav > a")
+                .length,
+            page.chatUsers.length,
+            "chat: staff contact list is incomplete",
+        );
+        if (page.chatSelectedUser) {
+            assert.ok(
+                dom.window.document.querySelector(".chat-composer"),
+                "chat: message composer is missing",
+            );
+            assert.ok(
+                dom.window.document.querySelector(
+                    '.chat-attach-button input[type="file"]',
+                ),
+                "chat: attachment control is missing",
             );
         }
     }

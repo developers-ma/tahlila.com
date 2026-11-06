@@ -4,18 +4,34 @@ import {
     KeyRound,
     Pencil,
     Plus,
+    Search,
     ShieldCheck,
     UserRound,
     Users,
+    X,
 } from "lucide-react";
 import { t } from "./i18n";
 import { p, date } from "./data";
 import { Button, Delete, Empty, Field, Form, Heading } from "./components";
 
 export function StaffPage() {
+    const [query, setQuery] = useState("");
     const administrators = p.users.filter(
         (user) => user.role?.slug === "administrator",
     ).length;
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    const filteredUsers = useMemo(
+        () =>
+            p.users.filter((user) =>
+                [user.name, user.email, user.role?.name]
+                    .filter(Boolean)
+                    .some((value) =>
+                        value.toLocaleLowerCase().includes(normalizedQuery),
+                    ),
+            ),
+        [normalizedQuery],
+    );
+    const operationalMembers = p.users.length - administrators;
 
     return (
         <>
@@ -40,6 +56,13 @@ export function StaffPage() {
                         <span>{t("Administrateurs")}</span>
                     </div>
                 </article>
+                <article className="staff-metric">
+                    <UserRound size={20} />
+                    <div>
+                        <strong>{operationalMembers}</strong>
+                        <span>{t("Membres opérationnels")}</span>
+                    </div>
+                </article>
             </div>
             <section className="panel staff-list">
                 <div className="section-heading">
@@ -54,26 +77,61 @@ export function StaffPage() {
                     </div>
                     <span className="count">{p.users.length}</span>
                 </div>
+                <div className="staff-toolbar">
+                    <label className="staff-search">
+                        <Search size={18} aria-hidden="true" />
+                        <input
+                            type="search"
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                            placeholder={t(
+                                "Rechercher par nom, e-mail ou rôle…",
+                            )}
+                            aria-label={t("Rechercher un collaborateur")}
+                            autoComplete="off"
+                        />
+                        <span className="staff-search-count">
+                            {filteredUsers.length} {t("résultat(s)")}
+                        </span>
+                        {query && (
+                            <button
+                                type="button"
+                                onClick={() => setQuery("")}
+                                aria-label={t("Effacer la recherche")}
+                                title={t("Effacer la recherche")}
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
+                    </label>
+                </div>
                 <div className="table-scroll">
-                    <table>
+                    <table className="staff-table">
                         <thead>
                             <tr>
                                 <th>{t("Collaborateur")}</th>
                                 <th>{t("Rôle")}</th>
                                 <th>{t("Permissions actives")}</th>
                                 <th>{t("Depuis le")}</th>
-                                <th>{t("Actions")}</th>
+                                <th className="right">{t("Actions")}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {p.users.map((user) => (
+                            {filteredUsers.map((user) => (
                                 <tr key={user.id}>
                                     <td>
                                         <div className="staff-person">
-                                            <span>
-                                                {user.name
-                                                    .slice(0, 2)
-                                                    .toUpperCase()}
+                                            <span className="staff-avatar">
+                                                {user.avatarUrl ? (
+                                                    <img
+                                                        src={user.avatarUrl}
+                                                        alt=""
+                                                    />
+                                                ) : (
+                                                    user.name
+                                                        .slice(0, 2)
+                                                        .toUpperCase()
+                                                )}
                                             </span>
                                             <div>
                                                 <strong>{user.name}</strong>
@@ -92,17 +150,29 @@ export function StaffPage() {
                                         </span>
                                     </td>
                                     <td>
-                                        {user.role?.slug === "administrator"
-                                            ? t("Accès complet")
-                                            : (user.permissions?.length || 0) +
-                                              " " +
-                                              t("accès")}
+                                        <span
+                                            className={
+                                                "staff-access " +
+                                                (user.role?.slug ===
+                                                "administrator"
+                                                    ? "full"
+                                                    : "")
+                                            }
+                                        >
+                                            <KeyRound size={13} />
+                                            {user.role?.slug === "administrator"
+                                                ? t("Accès complet")
+                                                : (user.permissions?.length ||
+                                                      0) +
+                                                  " " +
+                                                  t("accès")}
+                                        </span>
                                     </td>
                                     <td>{date(user.created_at)}</td>
-                                    <td>
+                                    <td className="right">
                                         <div className="row-actions">
                                             <a
-                                                className="icon-button"
+                                                className="table-action"
                                                 href={
                                                     "/staff/" +
                                                     user.id +
@@ -112,6 +182,9 @@ export function StaffPage() {
                                                 title={t("Modifier")}
                                             >
                                                 <Pencil size={16} />
+                                                <span>
+                                                    {t("Modifier les accès")}
+                                                </span>
                                             </a>
                                             {p.user?.email !== user.email && (
                                                 <Delete
@@ -126,7 +199,19 @@ export function StaffPage() {
                         </tbody>
                     </table>
                 </div>
-                {!p.users.length && <Empty />}
+                {!filteredUsers.length && (
+                    <Empty
+                        title={
+                            query
+                                ? t("Aucun collaborateur trouvé.")
+                                : t("Aucun collaborateur.")
+                        }
+                    >
+                        {query
+                            ? t("Essayez un autre nom, e-mail ou rôle.")
+                            : t("Ajoutez votre premier membre du laboratoire.")}
+                    </Empty>
+                )}
             </section>
         </>
     );

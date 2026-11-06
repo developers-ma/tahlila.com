@@ -1,14 +1,14 @@
 import { t } from "./i18n";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     ChevronRight,
+    Bell,
     FlaskConical,
     LogOut,
     Mail,
     Menu,
     Plus,
     Settings,
-    ShieldCheck,
     X,
 } from "lucide-react";
 import { can, p, navigationSections } from "./data";
@@ -16,6 +16,28 @@ import { Form } from "./components";
 export function Layout({ children }) {
     const [open, setOpen] = useState(false);
     const [expandedGroups, setExpandedGroups] = useState({});
+    const [unreadChatCount, setUnreadChatCount] = useState(
+        p.unreadChatCount || 0,
+    );
+    useEffect(() => {
+        if (!can("chat.use")) return undefined;
+        const refresh = async () => {
+            try {
+                const response = await fetch("/api/chat/unread", {
+                    credentials: "same-origin",
+                    headers: { Accept: "application/json" },
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setUnreadChatCount(data.count || 0);
+                }
+            } catch {
+                // The next polling cycle retries silently.
+            }
+        };
+        const interval = window.setInterval(refresh, 15000);
+        return () => window.clearInterval(interval);
+    }, []);
     const visibleSections = navigationSections
         .map((section) => ({
             ...section,
@@ -192,7 +214,11 @@ export function Layout({ children }) {
                     )}
                     <a href="/profile" className="sidebar-user">
                         <span className="sidebar-avatar">
-                            {p.user?.name?.slice(0, 2).toUpperCase()}
+                            {p.user?.avatarUrl ? (
+                                <img src={p.user.avatarUrl} alt="" />
+                            ) : (
+                                p.user?.name?.slice(0, 2).toUpperCase()
+                            )}
                         </span>
                         <span>
                             <strong>{p.user?.name}</strong>
@@ -222,16 +248,29 @@ export function Layout({ children }) {
                         <span>/</span> <b>{t(p.title)}</b>
                     </span>
                     <div className="header-right">
-                        <span className="secure">
-                            <ShieldCheck size={16} />
-                            {t("Espace s\xE9curis\xE9")}
-                        </span>
+                        {can("chat.use") && (
+                            <a
+                                className="notification-button"
+                                href="/chat"
+                                title={t("Notifications")}
+                                aria-label={`${t("Notifications")} : ${unreadChatCount}`}
+                            >
+                                <Bell size={19} />
+                                {unreadChatCount > 0 && (
+                                    <span>{Math.min(unreadChatCount, 99)}</span>
+                                )}
+                            </a>
+                        )}
                         <a
                             className="avatar"
                             href="/profile"
                             title={t("Mon compte")}
                         >
-                            {p.user?.name?.slice(0, 2).toUpperCase()}
+                            {p.user?.avatarUrl ? (
+                                <img src={p.user.avatarUrl} alt="" />
+                            ) : (
+                                p.user?.name?.slice(0, 2).toUpperCase()
+                            )}
                         </a>
                     </div>
                 </header>

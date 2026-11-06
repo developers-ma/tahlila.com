@@ -18,6 +18,7 @@ $protectedPages = [
     '/all-barcodes' => ['all-barcodes', 'all-barcodes', 'collection.manage'],
     '/test/barcodes/{id}' => ['barcode', 'barcodes', 'collection.manage'],
     '/print/result/{id}' => ['report', 'results.report', 'results.manage'],
+    '/chat' => ['chat', 'chat', 'chat.use'],
     '/staff' => ['staff', 'staff', 'staff.manage'],
     '/staff/create' => ['staff.create', 'staff.create', 'staff.manage'],
     '/staff/{id}/edit' => ['staff.edit', 'staff.edit', 'staff.manage'],

@@ -38,7 +38,7 @@ class LimsWorkflowTest extends TestCase
         $order->prices()->attach($price);
         EmailSetting::first()->update(['mail_password' => 'must-never-reach-react']);
         $staffMember = User::factory()->create();
-        $paths = ['/', '/dashboard', '/new-test', '/patients', '/patients/create', "/patients/$patient->id/edit", "/patients/$patient->id", '/prices', '/prices/create', "/prices/$price->id/edit", '/categories', '/categories/create', '/category/create', "/categories/$category->id/edit", '/groups', '/groups/create', '/group/create', "/groups/$group->id/edit", '/stocks', '/product/create', "/product/$stock->id/edit", '/tests', '/tests/create', "/tests/$order->id/edit", "/tests/$order->id", '/results', "/results/$order->id/edit", '/invoices', "/invoice/$order->id", '/all-barcodes', "/test/barcodes/$order->id", "/print/result/$order->id", '/staff', '/staff/create', "/staff/$staffMember->id/edit", '/email', '/settings', '/setting/laboratory', '/setting/payment', '/setting/email', '/setting/colors', '/setting/patient-portal', '/setting/license', '/languages', '/languages/en/edit', '/update', '/profile'];
+        $paths = ['/', '/dashboard', '/new-test', '/patients', '/patients/create', "/patients/$patient->id/edit", "/patients/$patient->id", '/prices', '/prices/create', "/prices/$price->id/edit", '/categories', '/categories/create', '/category/create', "/categories/$category->id/edit", '/groups', '/groups/create', '/group/create', "/groups/$group->id/edit", '/stocks', '/product/create', "/product/$stock->id/edit", '/tests', '/tests/create', "/tests/$order->id/edit", "/tests/$order->id", '/results', "/results/$order->id/edit", '/invoices', "/invoice/$order->id", '/all-barcodes', "/test/barcodes/$order->id", "/print/result/$order->id", '/chat', '/staff', '/staff/create', "/staff/$staffMember->id/edit", '/email', '/settings', '/setting/laboratory', '/setting/payment', '/setting/email', '/setting/colors', '/setting/patient-portal', '/setting/license', '/languages', '/languages/en/edit', '/update', '/profile'];
         foreach ($paths as $path) {
             $response = $this->get($path);
             $response->assertOk()->assertViewIs('react')->assertSee('id="lims"', false)->assertDontSee('must-never-reach-react');
@@ -128,6 +128,14 @@ class LimsWorkflowTest extends TestCase
             ->assertOk()
             ->assertJsonPath('rows.current_page', 1)
             ->assertJsonPath('rows.next_page_url', '/patients?page=2');
+        $this->getJson('/api/lims/tests/create')
+            ->assertOk()
+            ->assertJsonPath('screen', 'patient-select')
+            ->assertJsonFragment([
+                'id' => $patient->id,
+                'firstname' => $patient->firstname,
+                'lastname' => $patient->lastname,
+            ]);
         $this->getJson('/api/lims/tests/create?patient='.$patient->id)
             ->assertOk()
             ->assertJsonPath('screen', 'order')

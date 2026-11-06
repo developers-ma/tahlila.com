@@ -85,39 +85,53 @@ export function Mailbox() {
                     </Button>
                 </Heading>
                 <section className="mail-setup panel">
-                    <span className="mail-setup-icon">
-                        <Mail size={34} />
-                    </span>
-                    <span className="eyebrow">
-                        {t("PREMIÈRE CONFIGURATION")}
-                    </span>
-                    <h2>{t("Connectez la messagerie du laboratoire")}</h2>
-                    <p>
-                        {t(
-                            "Configurez SMTP pour envoyer et IMAP pour recevoir, lire et organiser les messages depuis Tahlila.",
-                        )}
-                    </p>
+                    <div className="mail-setup-copy">
+                        <span className="mail-setup-icon">
+                            <Mail size={34} />
+                        </span>
+                        <span className="eyebrow">
+                            {t("PREMIÈRE CONFIGURATION")}
+                        </span>
+                        <h2>{t("Connectez la messagerie du laboratoire")}</h2>
+                        <p>
+                            {t(
+                                "Configurez SMTP pour envoyer et IMAP pour recevoir, lire et organiser les messages depuis Tahlila.",
+                            )}
+                        </p>
+                        <Button href="/setting/email">
+                            <Settings size={17} />
+                            {t("Configurer la messagerie")}
+                        </Button>
+                    </div>
                     <div className="mail-protocols">
                         <div>
-                            <Send size={18} />
-                            <strong>SMTP</strong>
-                            <span>{t("Envoi sécurisé")}</span>
+                            <span className="mail-protocol-icon">
+                                <Send size={20} />
+                            </span>
+                            <div>
+                                <strong>SMTP</strong>
+                                <span>{t("Envoi sécurisé")}</span>
+                            </div>
                         </div>
                         <div>
-                            <Inbox size={18} />
-                            <strong>IMAP</strong>
-                            <span>{t("Réception synchronisée")}</span>
+                            <span className="mail-protocol-icon">
+                                <Inbox size={20} />
+                            </span>
+                            <div>
+                                <strong>IMAP</strong>
+                                <span>{t("Réception synchronisée")}</span>
+                            </div>
                         </div>
                         <div>
-                            <Paperclip size={18} />
-                            <strong>{t("Fichiers")}</strong>
-                            <span>{t("Pièces jointes")}</span>
+                            <span className="mail-protocol-icon">
+                                <Paperclip size={20} />
+                            </span>
+                            <div>
+                                <strong>{t("Fichiers")}</strong>
+                                <span>{t("Pièces jointes")}</span>
+                            </div>
                         </div>
                     </div>
-                    <Button href="/setting/email">
-                        <Settings size={17} />
-                        {t("Configurer la messagerie")}
-                    </Button>
                 </section>
             </>
         );

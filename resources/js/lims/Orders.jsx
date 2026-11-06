@@ -1,9 +1,147 @@
 import { t } from "./i18n";
-import { useState } from "react";
-import { ArrowRight, Plus, Search, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+    ArrowLeft,
+    ArrowRight,
+    CreditCard,
+    Phone,
+    Plus,
+    Search,
+    UserPlus,
+    X,
+} from "lucide-react";
 import { p, statuses, money, name, checked } from "./data";
 import { Button, Heading, Form, Field, Empty } from "./components";
 let selectionSequence = 0;
+
+const searchable = (value = "") =>
+    String(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase();
+
+export function PatientSelector() {
+    const [query, setQuery] = useState("");
+    const normalizedQuery = searchable(query.trim());
+    const patients = useMemo(
+        () =>
+            p.patients.filter((patient) =>
+                [
+                    patient.firstname,
+                    patient.lastname,
+                    patient.id_card,
+                    patient.phone,
+                    patient.email,
+                ].some((value) => searchable(value).includes(normalizedQuery)),
+            ),
+        [normalizedQuery],
+    );
+
+    return (
+        <>
+            <Heading>
+                <Button href="/patients/create">
+                    <UserPlus size={17} />
+                    {t("Nouveau patient")}
+                </Button>
+            </Heading>
+            <section className="panel patient-picker">
+                <header className="patient-picker-header">
+                    <div>
+                        <span className="eyebrow">{t("NOUVEAU DOSSIER")}</span>
+                        <h2>{t("Sélectionnez le patient")}</h2>
+                        <p>
+                            {t(
+                                "Recherchez un patient existant avant de choisir ses analyses.",
+                            )}
+                        </p>
+                    </div>
+                    <span className="patient-picker-total">
+                        {p.patients.length} {t("patients enregistrés")}
+                    </span>
+                </header>
+
+                <label className="patient-picker-search">
+                    <Search size={20} aria-hidden="true" />
+                    <input
+                        type="search"
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        placeholder={t(
+                            "Rechercher par nom, CIN, téléphone ou e-mail…",
+                        )}
+                        aria-label={t("Rechercher un patient")}
+                        autoComplete="off"
+                        autoFocus
+                    />
+                    <span>
+                        {patients.length} {t("résultat(s)")}
+                    </span>
+                    {query && (
+                        <button
+                            type="button"
+                            onClick={() => setQuery("")}
+                            aria-label={t("Effacer la recherche")}
+                            title={t("Effacer la recherche")}
+                        >
+                            <X size={17} />
+                        </button>
+                    )}
+                </label>
+
+                <div className="patient-picker-list">
+                    {patients.map((patient) => (
+                        <a
+                            key={patient.id}
+                            href={`/tests/create?patient=${patient.id}`}
+                            className="patient-picker-row"
+                        >
+                            <span className="patient-picker-avatar">
+                                {patient.firstname?.[0]}
+                                {patient.lastname?.[0]}
+                            </span>
+                            <span className="patient-picker-identity">
+                                <strong>{name(patient)}</strong>
+                                <small>
+                                    {patient.email ||
+                                        t("Aucune adresse e-mail")}
+                                </small>
+                            </span>
+                            <span className="patient-picker-detail">
+                                <CreditCard size={14} />
+                                {patient.id_card || "—"}
+                            </span>
+                            <span className="patient-picker-detail">
+                                <Phone size={14} />
+                                {patient.phone || "—"}
+                            </span>
+                            <span className="patient-picker-select">
+                                {t("Sélectionner")}
+                                <ArrowRight size={16} />
+                            </span>
+                        </a>
+                    ))}
+                </div>
+
+                {!patients.length && (
+                    <Empty title={t("Aucun patient trouvé.")}>
+                        {t(
+                            "Vérifiez votre recherche ou créez une nouvelle fiche patient.",
+                        )}
+                    </Empty>
+                )}
+
+                <footer className="patient-picker-footer">
+                    <a href="/new-test">
+                        <ArrowLeft size={15} />
+                        {t("Retour au choix précédent")}
+                    </a>
+                </footer>
+            </section>
+        </>
+    );
+}
+
 export function OrderForm() {
     const initial = p.old._submitted
         ? p.lines.filter((l) =>

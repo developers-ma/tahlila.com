@@ -1,5 +1,12 @@
 import { t } from "./i18n";
-import { ArrowRight, Plus, ShieldCheck } from "lucide-react";
+import {
+    ArrowRight,
+    FilePlus2,
+    History as HistoryIcon,
+    Pencil,
+    Plus,
+    ShieldCheck,
+} from "lucide-react";
 import { p, money, date } from "./data";
 import {
     Button,
@@ -43,7 +50,7 @@ export function ResourceList() {
                                 {fields.map((f) => (
                                     <th key={f.name}>{f.label}</th>
                                 ))}
-                                <th>{t("Actions")}</th>
+                                <th className="right">{t("Actions")}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -61,25 +68,30 @@ export function ResourceList() {
                                                   : row[f.name] || "—"}
                                         </td>
                                     ))}
-                                    <td>
+                                    <td className="right">
                                         <div className="row-actions">
                                             <a
-                                                className="text-action"
+                                                className="table-action table-action-primary"
                                                 href={`/${p.base}/${row.id}/edit`}
                                             >
+                                                <Pencil size={14} />
                                                 {t("Modifier")}
                                             </a>
                                             {p.resource === "patients" && (
                                                 <a
+                                                    className="table-action"
                                                     href={`/tests/create?patient=${row.id}`}
                                                 >
+                                                    <FilePlus2 size={15} />
                                                     Créer un dossier
                                                 </a>
                                             )}
                                             {p.resource === "patients" && (
                                                 <a
+                                                    className="table-action"
                                                     href={`/history/patient/${row.id}`}
                                                 >
+                                                    <HistoryIcon size={15} />
                                                     Historique
                                                 </a>
                                             )}
