@@ -78,10 +78,12 @@ type NavigationItem = {
 };
 export const navigationSections: {
     label: string;
+    hideLabel?: boolean;
     items: NavigationItem[];
 }[] = [
     {
         label: "Activité",
+        hideLabel: true,
         items: [
             {
                 label: "Vue d’ensemble",

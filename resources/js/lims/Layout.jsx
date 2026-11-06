@@ -84,20 +84,17 @@ export function Layout({ children }) {
                 >
                     <X />
                 </button>
-                {can("orders.manage") && (
-                    <a className="new-order-link" href="/new-test">
-                        <span className="new-order-icon">
-                            <Plus size={17} />
-                        </span>
-                        <span>{t("Nouvelle analyse")}</span>
-                    </a>
-                )}
                 <nav aria-label="Navigation principale">
                     {visibleSections.map((section) => (
-                        <div className="nav-section" key={section.label}>
-                            <span className="nav-section-label">
-                                {t(section.label)}
-                            </span>
+                        <div
+                            className={`nav-section ${section.hideLabel ? "nav-section-no-label" : ""}`}
+                            key={section.label}
+                        >
+                            {!section.hideLabel && (
+                                <span className="nav-section-label">
+                                    {t(section.label)}
+                                </span>
+                            )}
                             {section.items.map((item) => {
                                 const Icon = item.icon;
                                 if (!item.children) {
@@ -248,6 +245,14 @@ export function Layout({ children }) {
                         <span>/</span> <b>{t(p.title)}</b>
                     </span>
                     <div className="header-right">
+                        {can("orders.manage") && (
+                            <a className="topbar-new-order" href="/new-test">
+                                <span className="topbar-new-order-icon">
+                                    <Plus size={16} />
+                                </span>
+                                <span>{t("Nouvelle analyse")}</span>
+                            </a>
+                        )}
                         {can("chat.use") && (
                             <a
                                 className="notification-button"

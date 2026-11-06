@@ -219,37 +219,6 @@ svg {
     margin-top: 7px;
 }
 
-.new-order-link {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    margin: 28px 0 25px;
-    padding: 11px 14px 11px 11px;
-    border-radius: 999px;
-    background: var(--lime);
-    color: var(--green);
-    font-size: 12px;
-    font-weight: 700;
-    transition:
-        background 0.16s,
-        transform 0.16s;
-}
-
-.new-order-link:hover {
-    background: #a8df72;
-    transform: translateY(-1px);
-}
-
-.new-order-icon {
-    display: grid;
-    width: 29px;
-    height: 29px;
-    place-items: center;
-    border-radius: 50%;
-    background: var(--green);
-    color: white;
-}
-
 nav {
     display: flex;
     flex-direction: column;
@@ -260,6 +229,10 @@ nav {
     display: flex;
     flex-direction: column;
     gap: 3px;
+}
+
+.nav-section-no-label {
+    padding-top: 26px;
 }
 
 .nav-section-label {
@@ -492,6 +465,45 @@ nav {
     display: flex;
     align-items: center;
     gap: 22px;
+}
+
+.topbar-new-order {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 42px;
+    padding: 7px 16px 7px 8px;
+    border: 1px solid color-mix(in srgb, var(--lime), var(--green) 12%);
+    border-radius: 999px;
+    color: var(--green);
+    background: var(--lime);
+    box-shadow: 0 5px 14px rgba(22, 51, 0, 0.08);
+    font-size: 11px;
+    font-weight: 750;
+    white-space: nowrap;
+    transition:
+        background 160ms ease,
+        box-shadow 160ms ease,
+        transform 160ms ease;
+}
+
+.topbar-new-order:hover,
+.topbar-new-order:focus-visible {
+    color: var(--green);
+    background: color-mix(in srgb, var(--lime), #fff 12%);
+    box-shadow: 0 7px 18px rgba(22, 51, 0, 0.13);
+    transform: translateY(-1px);
+}
+
+.topbar-new-order-icon {
+    display: grid;
+    place-items: center;
+    width: 27px;
+    height: 27px;
+    flex: 0 0 27px;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--green);
 }
 
 .secure {
@@ -5247,6 +5259,22 @@ footer span {
 
     .header-right {
         gap: 10px;
+    }
+
+    .topbar-new-order {
+        width: 40px;
+        min-height: 40px;
+        padding: 6px;
+    }
+
+    .topbar-new-order > span:last-child {
+        display: none;
+    }
+
+    .topbar-new-order-icon {
+        width: 26px;
+        height: 26px;
+        flex-basis: 26px;
     }
 
     .heading {

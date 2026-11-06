@@ -187,6 +187,21 @@ for (const page of pages) {
             null,
             `${page.path}: secure workspace label must not be rendered in the topbar`,
         );
+        if (page.permissions?.includes("orders.manage")) {
+            assert.ok(
+                dom.window.document.querySelector(
+                    '.topbar a.topbar-new-order[href="/new-test"]',
+                ),
+                `${page.path}: new order action is missing from the topbar`,
+            );
+            assert.equal(
+                dom.window.document.querySelector(
+                    '.sidebar a[href="/new-test"]',
+                ),
+                null,
+                `${page.path}: new order action must not remain in the sidebar`,
+            );
+        }
         if (page.permissions?.includes("chat.use")) {
             assert.ok(
                 dom.window.document.querySelector('.topbar a[href="/chat"]'),
@@ -209,6 +224,19 @@ for (const page of pages) {
             dom.window.document.querySelectorAll(".nav-section").length,
             3,
             `${page.path}: sidebar sections missing`,
+        );
+        assert.equal(
+            dom.window.document.querySelector(
+                ".nav-section-no-label > .nav-section-label",
+            ),
+            null,
+            `${page.path}: Activity label must not be rendered in the sidebar`,
+        );
+        assert.ok(
+            dom.window.document.querySelector(
+                '.nav-section-no-label > a[href="/dashboard"]',
+            ),
+            `${page.path}: Dashboard must keep its dedicated top spacing`,
         );
         assert.equal(
             dom.window.document.querySelector(".workspace"),
