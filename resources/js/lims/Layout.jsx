@@ -296,11 +296,27 @@ export function Layout({ children }) {
                     </div>
                     {children}
                     <footer>
-                        TAHLILA{" "}
-                        <span>
-                            {t(
-                                "Un laboratoire organis\xE9. Des soins qui avancent.",
-                            )}
+                        <span className="footer-product">
+                            TAHLILA{" "}
+                            <span>
+                                {t(
+                                    "Un laboratoire organis\xE9. Des soins qui avancent.",
+                                )}
+                            </span>
+                        </span>
+                        <span className="footer-copyright">
+                            Copyright © Tahlila By{" "}
+                            <a
+                                href="https://developer.ma"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="Developer.ma"
+                            >
+                                <img
+                                    src="/images/developer-community.svg"
+                                    alt="Developer.ma"
+                                />
+                            </a>
                         </span>
                     </footer>
                 </main>

@@ -165,6 +165,23 @@ for (const page of pages) {
             dom.window.document.querySelector("nav"),
             `${page.path}: missing navigation`,
         );
+        const footerCredit = dom.window.document.querySelector(
+            'footer a[href="https://developer.ma"]',
+        );
+        assert.ok(
+            footerCredit,
+            `${page.path}: Developer.ma footer attribution is missing`,
+        );
+        assert.equal(
+            footerCredit.getAttribute("target"),
+            "_blank",
+            `${page.path}: Developer.ma footer link must open safely in a new tab`,
+        );
+        assert.equal(
+            footerCredit.querySelector("img")?.getAttribute("src"),
+            "/images/developer-community.svg",
+            `${page.path}: Developer.ma footer logo is missing`,
+        );
         assert.equal(
             dom.window.document.querySelector(".topbar .secure"),
             null,
