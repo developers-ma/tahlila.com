@@ -378,6 +378,18 @@ for (const page of pages) {
             invoice.querySelector(".invoice-brand"),
             "invoice page: missing laboratory identity",
         );
+        assert.ok(
+            invoice.classList.contains("print-document"),
+            "invoice page: missing A4 print document contract",
+        );
+        assert.equal(
+            new URL(
+                invoice.querySelector(".laboratory-logo")?.getAttribute("src"),
+                dom.window.location.origin,
+            ).pathname,
+            "/storage/logos/laboratory.png",
+            "invoice page: configured laboratory logo is missing",
+        );
         assert.equal(
             invoice.querySelectorAll(".invoice-party").length,
             3,
@@ -401,6 +413,22 @@ for (const page of pages) {
                 '.invoice-payment-editor input[name="remaining_or_give"]',
             ),
             "invoice page: payment workflow was lost",
+        );
+    }
+    if (page.screen === "report") {
+        const report = dom.window.document.querySelector(".report-document");
+        assert.ok(report, "report page: missing A4 report document");
+        assert.ok(
+            report.classList.contains("print-document"),
+            "report page: missing A4 print document contract",
+        );
+        assert.equal(
+            new URL(
+                report.querySelector(".laboratory-logo")?.getAttribute("src"),
+                dom.window.location.origin,
+            ).pathname,
+            "/storage/logos/laboratory.png",
+            "report page: configured laboratory logo is missing",
         );
     }
     if (page.screen === "staff") {
@@ -538,6 +566,24 @@ for (const page of pages) {
             "patient result: analysis lines are incomplete",
         );
     }
+    if (page.screen === "chat") {
+        const composer = dom.window.document.querySelector(".chat-composer");
+        assert.ok(composer, "chat page: missing message composer");
+        const textarea = composer.querySelector("textarea");
+        const attachmentInput = composer.querySelector(
+            '.chat-attach-button input[type="file"]',
+        );
+        assert.ok(textarea, "chat page: missing message textarea");
+        assert.ok(
+            attachmentInput,
+            "chat page: attachment input must stay inside its attachment button",
+        );
+        assert.notEqual(
+            textarea,
+            attachmentInput,
+            "chat page: message textarea must not be the attachment input",
+        );
+    }
     if (
         page.resource === "settings" ||
         ["profile", "languages", "language", "update"].includes(page.screen) ||
@@ -563,6 +609,19 @@ for (const page of pages) {
             dom.window.document.querySelector(".settings-form"),
             `${page.path}: missing dedicated settings form`,
         );
+        if (page.screen === "setting.laboratory") {
+            const settingsForm =
+                dom.window.document.querySelector(".settings-form");
+            assert.equal(
+                settingsForm.getAttribute("enctype"),
+                "multipart/form-data",
+                "laboratory settings: logo form must support multipart uploads",
+            );
+            assert.ok(
+                settingsForm.querySelector('input[type="file"][name="logo"]'),
+                "laboratory settings: logo upload input is missing",
+            );
+        }
         for (const field of page.fields) {
             assert.ok(
                 dom.window.document.querySelector(`[name="${field.name}"]`),
@@ -581,6 +640,26 @@ for (const page of pages) {
                 resetButton.getAttribute("formnovalidate"),
                 "",
                 "colors settings: reset must not depend on current field validation",
+            );
+            resetButton.click();
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            assert.ok(
+                dom.window.document.querySelector(
+                    '.confirm-dialog[role="dialog"]',
+                ),
+                "colors settings: reset must use the branded confirmation dialog",
+            );
+            dom.window.document
+                .querySelector(".confirm-dialog-actions .secondary")
+                ?.click();
+        }
+        if (page.screen === "setting.laboratory") {
+            assert.equal(
+                dom.window.document
+                    .querySelector(".settings-form")
+                    .getAttribute("action"),
+                "/laboratory-settings",
+                "laboratory settings: form must submit to the upload endpoint",
             );
         }
     }

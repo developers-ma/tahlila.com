@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\ColorSetting;
 use App\Models\EmailSetting;
 use App\Models\Group;
+use App\Models\LaboratorySetting;
 use App\Models\Patient;
 use App\Models\Price;
 use App\Models\Stock;
@@ -13,6 +14,8 @@ use App\Models\Test as Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class LimsWorkflowTest extends TestCase
@@ -36,6 +39,7 @@ class LimsWorkflowTest extends TestCase
         $stock = Stock::create(['product_name' => 'Tube', 'product_color' => '#00ff00', 'quantity' => 10]);
         $order = Order::create(['patient_id' => $patient->id, 'total_price' => 50, 'paid_amount' => 0, 'remaining_or_give' => 50, 'payment_method' => 'cash', 'test_status' => '1']);
         $order->prices()->attach($price);
+        LaboratorySetting::firstOrFail()->update(['logo' => 'logos/laboratory.png']);
         EmailSetting::first()->update(['mail_password' => 'must-never-reach-react']);
         $staffMember = User::factory()->create();
         $paths = ['/', '/dashboard', '/new-test', '/patients', '/patients/create', "/patients/$patient->id/edit", "/patients/$patient->id", '/prices', '/prices/create', "/prices/$price->id/edit", '/categories', '/categories/create', '/category/create', "/categories/$category->id/edit", '/groups', '/groups/create', '/group/create', "/groups/$group->id/edit", '/stocks', '/product/create', "/product/$stock->id/edit", '/tests', '/tests/create', "/tests/$order->id/edit", "/tests/$order->id", '/results', "/results/$order->id/edit", '/invoices', "/invoice/$order->id", '/all-barcodes', "/test/barcodes/$order->id", "/print/result/$order->id", '/chat', '/staff', '/staff/create', "/staff/$staffMember->id/edit", '/email', '/settings', '/setting/laboratory', '/setting/payment', '/setting/email', '/setting/colors', '/setting/patient-portal', '/setting/license', '/languages', '/languages/en/edit', '/update', '/profile'];
@@ -216,5 +220,33 @@ class LimsWorkflowTest extends TestCase
         $this->put('/tests/'.$second->id, $data)->assertSessionHasErrors('modifieds.0');
         $this->assertDatabaseCount('test_for_patients', 2);
         $this->assertDatabaseHas('test_for_patients', ['id' => $foreignLine->id, 'test_id' => $first->id]);
+    }
+
+    public function test_laboratory_logo_upload_is_saved_to_the_public_disk(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Storage::fake('public');
+
+        $response = $this->post('/laboratory-settings', [
+            'laboratory_name' => 'Laboratoire Tahlila',
+            'managing_director' => 'Responsable',
+            'phone' => '0612345678',
+            'fax' => '',
+            'email' => 'contact@tahlila.test',
+            'address' => 'Fès',
+            'company_number' => 'RC-123',
+            'tax_id' => 'IF-123',
+            'logo' => UploadedFile::fake()->image('laboratory-logo.png'),
+            'footer_title1' => 'Laboratoire Tahlila',
+            'footer_title2' => '0612345678',
+            'footer_title3' => 'Fès, Maroc',
+        ]);
+
+        $response->assertSessionHasNoErrors()->assertRedirect('/setting/laboratory');
+        $logo = LaboratorySetting::firstOrFail()->fresh()->logo;
+
+        $this->assertNotEmpty($logo);
+        Storage::disk('public')->assertExists($logo);
+        $this->assertStringContainsString('/storage/', LaboratorySetting::first()->logo_url);
     }
 }

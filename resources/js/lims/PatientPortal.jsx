@@ -124,11 +124,23 @@ function PatientAuth() {
                     <span className="eyebrow">{t(content.eyebrow)}</span>
                     <h2>{t(content.title)}</h2>
                     <p>{t(content.description)}</p>
-                    {p.flash && <div className="notice">{p.flash}</div>}
+                    {p.flash && (
+                        <div
+                            className="notice"
+                            role="status"
+                            aria-live="polite"
+                        >
+                            {p.flash}
+                        </div>
+                    )}
                     {Object.values(p.errors || {})
                         .flat()
                         .map((error, index) => (
-                            <p className="error-text" role="alert" key={index}>
+                            <p
+                                className="error-text alert-inline"
+                                role="alert"
+                                key={index}
+                            >
                                 {error}
                             </p>
                         ))}
@@ -228,7 +240,11 @@ function PatientLayout({ children }) {
                 </nav>
             </header>
             <main className="patient-portal-main">
-                {p.flash && <div className="notice">{p.flash}</div>}
+                {p.flash && (
+                    <div className="notice" role="status" aria-live="polite">
+                        {p.flash}
+                    </div>
+                )}
                 {children}
             </main>
             <footer className="patient-portal-footer">

@@ -259,14 +259,14 @@ export function Invoice() {
             </Heading>
             <DocumentLinks />
 
-            <section className="panel document invoice-document">
+            <section className="panel document invoice-document print-document">
                 <header className="invoice-header">
                     <div className="invoice-brand">
                         <div className="invoice-brand-mark">
-                            {p.laboratory?.logo ? (
+                            {p.laboratory?.logo_url ? (
                                 <img
                                     className="laboratory-logo"
-                                    src={"/storage/" + p.laboratory.logo}
+                                    src={p.laboratory.logo_url}
                                     alt={p.laboratory.laboratory_name}
                                 />
                             ) : (
@@ -582,12 +582,12 @@ export function Report() {
                 </Button>
             </Heading>
             <DocumentLinks />
-            <section className="panel document">
+            <section className="panel document report-document print-document">
                 <div className="document-head">
-                    {p.laboratory?.logo && (
+                    {p.laboratory?.logo_url && (
                         <img
                             className="laboratory-logo"
-                            src={`/storage/${p.laboratory.logo}`}
+                            src={p.laboratory.logo_url}
                             alt={p.laboratory.laboratory_name}
                         />
                     )}
@@ -711,7 +711,11 @@ export function ResultNotification() {
                 >
                     {busy ? "Envoi…" : "Envoyer la notification"}
                 </Button>
-                <p role="status">{notice}</p>
+                {notice && (
+                    <p className="alert-inline success" role="status">
+                        {notice}
+                    </p>
+                )}
             </section>
         )
     );

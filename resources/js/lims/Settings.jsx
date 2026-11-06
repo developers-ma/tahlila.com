@@ -1,5 +1,5 @@
 import { t } from "./i18n";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
     ArrowRight,
     ArrowUpRight,
@@ -523,12 +523,27 @@ export function SettingsForm() {
     );
     const submitted = p.old?._submitted ? { ...record, ...p.old } : record;
     const [colors, setColors] = useState(() => ({ ...submitted }));
+    const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+    const formRef = useRef(null);
+
+    const confirmColorReset = () => {
+        const resetButton = formRef.current?.querySelector(
+            '[data-reset-colors="true"]',
+        );
+        setResetConfirmOpen(false);
+        formRef.current?.requestSubmit(resetButton);
+    };
 
     if (!config) return null;
 
     return (
         <SettingsShell description={config.description}>
-            <Form action={p.action} method={p.method} className="settings-form">
+            <Form
+                action={p.action}
+                method={p.method}
+                className="settings-form"
+                formRef={formRef}
+            >
                 <div className="settings-sections">
                     {config.groups.map((group) => (
                         <SettingsSection
@@ -566,10 +581,13 @@ export function SettingsForm() {
                             </div>
                             {section === "laboratory" &&
                                 group.fields.includes("logo") &&
-                                record.logo && (
+                                (record.logo_url || record.logo) && (
                                     <div className="current-logo">
                                         <img
-                                            src={`/storage/${record.logo}`}
+                                            src={
+                                                record.logo_url ||
+                                                `/storage/${record.logo}`
+                                            }
                                             alt="Logo actuel du laboratoire"
                                         />
                                         <div>
@@ -634,18 +652,12 @@ export function SettingsForm() {
                             <Button
                                 type="submit"
                                 secondary
+                                data-reset-colors="true"
                                 formAction="/setting/colors/reset"
                                 formNoValidate
                                 onClick={(event) => {
-                                    if (
-                                        !window.confirm(
-                                            t(
-                                                "Restaurer toutes les couleurs par défaut ?",
-                                            ),
-                                        )
-                                    ) {
-                                        event.preventDefault();
-                                    }
+                                    event.preventDefault();
+                                    setResetConfirmOpen(true);
                                 }}
                             >
                                 <RotateCcw size={16} />
@@ -658,6 +670,54 @@ export function SettingsForm() {
                         </Button>
                     </div>
                 </div>
+                {section === "colors" && resetConfirmOpen && (
+                    <div
+                        className="confirm-backdrop"
+                        role="presentation"
+                        onMouseDown={(event) => {
+                            if (event.target === event.currentTarget) {
+                                setResetConfirmOpen(false);
+                            }
+                        }}
+                    >
+                        <section
+                            className="confirm-dialog"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="reset-colors-title"
+                        >
+                            <div className="confirm-dialog-icon">
+                                <RotateCcw size={22} />
+                            </div>
+                            <div>
+                                <h2 id="reset-colors-title">
+                                    {t("Restaurer les couleurs par défaut ?")}
+                                </h2>
+                                <p>
+                                    {t(
+                                        "La palette actuelle sera remplacée par les couleurs recommandées de Tahlila.",
+                                    )}
+                                </p>
+                            </div>
+                            <div className="confirm-dialog-actions">
+                                <Button
+                                    type="button"
+                                    secondary
+                                    onClick={() => setResetConfirmOpen(false)}
+                                >
+                                    {t("Annuler")}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={confirmColorReset}
+                                >
+                                    <RotateCcw size={16} />
+                                    {t("Restaurer")}
+                                </Button>
+                            </div>
+                        </section>
+                    </div>
+                )}
             </Form>
         </SettingsShell>
     );

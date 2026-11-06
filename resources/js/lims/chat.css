@@ -250,6 +250,12 @@
     color: #fff;
     background: var(--green);
 }
+
+.chat-messages .mine .chat-bubble > p,
+.chat-messages .mine .chat-bubble strong,
+.chat-messages .mine .chat-bubble small {
+    color: #fff;
+}
 .chat-messages .theirs {
     align-self: flex-start;
 }
@@ -351,15 +357,19 @@
     background: var(--green);
 }
 .chat-attach-button {
+    position: relative;
+    overflow: hidden;
     color: var(--green);
     background: #eaf3e2;
     cursor: pointer;
 }
 .chat-attach-button input {
     position: absolute;
-    width: 1px;
-    height: 1px;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     opacity: 0;
+    cursor: pointer;
 }
 .chat-files-selected {
     display: flex;
@@ -392,7 +402,7 @@
     font-size: 7px;
 }
 .chat-composer > .error-text {
-    display: block;
+    display: flex;
     margin-bottom: 8px;
 }
 .chat-no-selection {

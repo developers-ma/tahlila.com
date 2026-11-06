@@ -235,7 +235,7 @@ function SpaApplication() {
         <>
             {loading && <div className="spa-progress" role="progressbar" />}
             {loadError && (
-                <div className="spa-load-error" role="alert">
+                <div className="spa-load-error alert-inline" role="alert">
                     {loadError}
                     <button onClick={() => window.location.reload()}>
                         Réessayer

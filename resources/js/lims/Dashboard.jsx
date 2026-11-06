@@ -8,23 +8,15 @@ import {
     ClipboardList,
     FileText,
     FlaskConical,
-    Plus,
     Users,
 } from "lucide-react";
 import { can, p, money } from "./data";
-import { Button, Heading } from "./components";
+import { Heading } from "./components";
 import { OrderTable } from "./Resources";
 export function Dashboard() {
     return (
         <>
-            <Heading>
-                {can("orders.manage") && (
-                    <Button href="/new-test">
-                        <Plus size={18} />
-                        {t("Nouvelle analyse")}
-                    </Button>
-                )}
-            </Heading>
+            <Heading />
             <section className="overview">
                 <div className="balance-card">
                     <div className="card-top">

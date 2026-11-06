@@ -287,7 +287,12 @@ export function Chat() {
                             </div>
                             <form className="chat-composer" onSubmit={send}>
                                 {error && (
-                                    <span className="error-text">{error}</span>
+                                    <span
+                                        className="error-text alert-inline"
+                                        role="alert"
+                                    >
+                                        {error}
+                                    </span>
                                 )}
                                 {!!files.length && (
                                     <div className="chat-files-selected">
@@ -325,6 +330,9 @@ export function Chat() {
                                         <input
                                             ref={fileInput}
                                             type="file"
+                                            aria-label={t(
+                                                "Joindre des fichiers",
+                                            )}
                                             multiple
                                             accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
                                             onChange={(event) =>

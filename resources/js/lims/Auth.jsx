@@ -102,11 +102,23 @@ export function Auth() {
                             "Acc\xE9dez \xE0 votre espace de travail s\xE9curis\xE9.",
                         )}
                     </p>
-                    {p.flash && <div className="notice">{p.flash}</div>}
+                    {p.flash && (
+                        <div
+                            className="notice"
+                            role="status"
+                            aria-live="polite"
+                        >
+                            {p.flash}
+                        </div>
+                    )}
                     {Object.values(p.errors)
                         .flat()
                         .map((error, i) => (
-                            <p role="alert" className="error-text" key={i}>
+                            <p
+                                role="alert"
+                                className="error-text alert-inline"
+                                key={i}
+                            >
                                 {error}
                             </p>
                         ))}

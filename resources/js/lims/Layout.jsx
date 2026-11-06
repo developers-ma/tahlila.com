@@ -282,12 +282,20 @@ export function Layout({ children }) {
                 <main id="content">
                     <div className="messages">
                         {p.flash && (
-                            <div className="notice" role="status">
+                            <div
+                                className="notice"
+                                role="status"
+                                aria-live="polite"
+                            >
                                 {p.flash}
                             </div>
                         )}
                         {Object.keys(p.errors).length > 0 && (
-                            <div className="notice error" role="alert">
+                            <div
+                                className="notice error"
+                                role="alert"
+                                aria-live="assertive"
+                            >
                                 <strong>
                                     Vérifiez les informations saisies.
                                 </strong>
