@@ -11,17 +11,19 @@ import {
     Plus,
     Users,
 } from "lucide-react";
-import { p, money } from "./data";
+import { can, p, money } from "./data";
 import { Button, Heading } from "./components";
 import { OrderTable } from "./Resources";
 export function Dashboard() {
     return (
         <>
             <Heading>
-                <Button href="/new-test">
-                    <Plus size={18} />
-                    {t("Nouvelle analyse")}
-                </Button>
+                {can("orders.manage") && (
+                    <Button href="/new-test">
+                        <Plus size={18} />
+                        {t("Nouvelle analyse")}
+                    </Button>
+                )}
             </Heading>
             <section className="overview">
                 <div className="balance-card">
@@ -52,7 +54,14 @@ export function Dashboard() {
                             ["processing", "2", t("En traitement")],
                             ["ready", "3", t("R\xE9sultats pr\xEAts")],
                         ].map(([key, status, label]) => (
-                            <a key={key} href={`/tests?status=${status}`}>
+                            <a
+                                key={key}
+                                href={
+                                    can("orders.manage")
+                                        ? `/tests?status=${status}`
+                                        : undefined
+                                }
+                            >
                                 <span className={`round-icon status-${status}`}>
                                     {status === "3" ? (
                                         <Check />
@@ -69,30 +78,40 @@ export function Dashboard() {
                 </div>
             </section>
             <div className="quick-actions">
-                <a href="/patients/create">
-                    <Users />
-                    <span>
-                        <strong>{t("Accueillir un patient")}</strong>
-                        <small>{t("Cr\xE9er sa fiche et son dossier")}</small>
-                    </span>
-                    <ArrowRight />
-                </a>
-                <a href="/results?status=2">
-                    <ClipboardList />
-                    <span>
-                        <strong>{t("Saisir les r\xE9sultats")}</strong>
-                        <small>{t("Poursuivre les analyses en cours")}</small>
-                    </span>
-                    <ArrowRight />
-                </a>
-                <a href="/invoices">
-                    <FileText />
-                    <span>
-                        <strong>{t("Suivre les r\xE8glements")}</strong>
-                        <small>{money(p.stats.balance)} à recevoir</small>
-                    </span>
-                    <ArrowRight />
-                </a>
+                {can("patients.manage") && (
+                    <a href="/patients/create">
+                        <Users />
+                        <span>
+                            <strong>{t("Accueillir un patient")}</strong>
+                            <small>
+                                {t("Cr\xE9er sa fiche et son dossier")}
+                            </small>
+                        </span>
+                        <ArrowRight />
+                    </a>
+                )}
+                {can("results.manage") && (
+                    <a href="/results?status=2">
+                        <ClipboardList />
+                        <span>
+                            <strong>{t("Saisir les r\xE9sultats")}</strong>
+                            <small>
+                                {t("Poursuivre les analyses en cours")}
+                            </small>
+                        </span>
+                        <ArrowRight />
+                    </a>
+                )}
+                {can("invoices.manage") && (
+                    <a href="/invoices">
+                        <FileText />
+                        <span>
+                            <strong>{t("Suivre les r\xE8glements")}</strong>
+                            <small>{money(p.stats.balance)} à recevoir</small>
+                        </span>
+                        <ArrowRight />
+                    </a>
+                )}
             </div>
             <ActivityChart />
             <section className="panel">
@@ -105,10 +124,12 @@ export function Dashboard() {
                             )}
                         </p>
                     </div>
-                    <a className="text-action" href="/tests">
-                        {t("Tous les dossiers")}
-                        <ArrowRight size={16} />
-                    </a>
+                    {can("orders.manage") && (
+                        <a className="text-action" href="/tests">
+                            {t("Tous les dossiers")}
+                            <ArrowRight size={16} />
+                        </a>
+                    )}
                 </div>
                 <OrderTable mode="dashboard" />
             </section>

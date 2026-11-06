@@ -65,33 +65,107 @@ export const name = (patient?: Patient | null) =>
     patient ? `${patient.firstname} ${patient.lastname}` : "Patient supprimé";
 export const checked = (value: unknown) =>
     value === true || value === "true" || value === "1" || value === 1;
-type NavigationItem = [string, string, LucideIcon];
+export const can = (permission?: string) =>
+    !permission ||
+    (p.permissions as string[] | undefined)?.includes(permission);
+type NavigationItem = {
+    label: string;
+    href: string;
+    icon: LucideIcon;
+    permission?: string;
+    children?: NavigationItem[];
+};
 export const navigationSections: {
     label: string;
     items: NavigationItem[];
 }[] = [
     {
         label: "Activité",
-        items: [["Vue d’ensemble", "/dashboard", LayoutDashboard]],
+        items: [
+            {
+                label: "Vue d’ensemble",
+                href: "/dashboard",
+                icon: LayoutDashboard,
+                permission: "dashboard.view",
+            },
+        ],
     },
     {
         label: "Laboratoire",
         items: [
-            ["Patients", "/patients", Users],
-            ["Dossiers d’analyses", "/tests", FlaskConical],
-            ["Prélèvements", "/all-barcodes", Barcode],
-            ["Résultats", "/results", ClipboardList],
-            ["Factures", "/invoices", FileText],
+            {
+                label: "Patients",
+                href: "/patients",
+                icon: Users,
+                permission: "patients.manage",
+            },
+            {
+                label: "Dossiers d’analyses",
+                href: "/tests",
+                icon: FlaskConical,
+                permission: "orders.manage",
+            },
+            {
+                label: "Prélèvements",
+                href: "/all-barcodes",
+                icon: Barcode,
+                permission: "collection.manage",
+            },
+            {
+                label: "Résultats",
+                href: "/results",
+                icon: ClipboardList,
+                permission: "results.manage",
+            },
+            {
+                label: "Factures",
+                href: "/invoices",
+                icon: FileText,
+                permission: "invoices.manage",
+            },
         ],
     },
     {
         label: "Gestion",
         items: [
-            ["Catalogue & tarifs", "/prices", SlidersHorizontal],
-            ["Groupes", "/groups", ClipboardList],
-            ["Catégories", "/categories", ClipboardList],
-            ["Stocks", "/stocks", Package],
-            ["Équipe", "/staff", Users],
+            {
+                label: "Tests",
+                href: "/prices",
+                icon: SlidersHorizontal,
+                permission: "catalog.manage",
+                children: [
+                    {
+                        label: "Catalogue & tarifs",
+                        href: "/prices",
+                        icon: SlidersHorizontal,
+                        permission: "catalog.manage",
+                    },
+                    {
+                        label: "Groupes",
+                        href: "/groups",
+                        icon: ClipboardList,
+                        permission: "catalog.manage",
+                    },
+                    {
+                        label: "Catégories",
+                        href: "/categories",
+                        icon: ClipboardList,
+                        permission: "catalog.manage",
+                    },
+                ],
+            },
+            {
+                label: "Stocks",
+                href: "/stocks",
+                icon: Package,
+                permission: "inventory.manage",
+            },
+            {
+                label: "Équipe",
+                href: "/staff",
+                icon: Users,
+                permission: "staff.manage",
+            },
         ],
     },
 ];

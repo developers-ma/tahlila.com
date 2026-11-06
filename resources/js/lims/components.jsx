@@ -1,6 +1,6 @@
 import { t } from "./i18n";
-import { useState, useId } from "react";
-import { FlaskConical, Search, Trash2 } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Eye, EyeOff, FlaskConical, Search, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { p, replacePage, statuses, checked } from "./data";
 export function Button({
@@ -27,6 +27,7 @@ export function Form({
     children,
     className = "",
     confirm,
+    reload = false,
     ...props
 }) {
     const [busy, setBusy] = useState(false);
@@ -38,6 +39,8 @@ export function Form({
 
         setBusy(true);
         const form = event.currentTarget;
+        const submitter = event.nativeEvent.submitter;
+        const submitAction = submitter?.formAction || action;
         const formData = new FormData(form);
         const old = { _submitted: "1" };
         for (const [rawKey, value] of formData.entries()) {
@@ -59,7 +62,7 @@ export function Form({
         }
 
         try {
-            const response = await fetch(action, {
+            const response = await fetch(submitAction, {
                 method: "POST",
                 body: formData,
                 credentials: "same-origin",
@@ -120,7 +123,7 @@ export function Form({
             method="POST"
             encType="multipart/form-data"
             className={className}
-            onSubmit={submit}
+            onSubmit={reload ? undefined : submit}
             {...props}
         >
             <input type="hidden" name="_token" value={p.csrf} />
@@ -139,7 +142,21 @@ export function Form({
 }
 export function Field({ field, record = {}, useOld = true }) {
     const fieldId = useId();
-    const { name, label, type = "text", required, options = {} } = field;
+    const [showPassword, setShowPassword] = useState(false);
+    const {
+        name,
+        label,
+        type = "text",
+        required,
+        options = {},
+        emptyLabel = "S\xE9lectionner\u2026",
+        placeholder,
+        help,
+        autoComplete,
+        inputMode,
+        min,
+        max,
+    } = field;
     const value =
         useOld && p.old?._submitted
             ? (p.old[name] ?? "")
@@ -148,8 +165,16 @@ export function Field({ field, record = {}, useOld = true }) {
         id: fieldId,
         name,
         required,
+        placeholder,
+        autoComplete,
+        inputMode,
+        min,
+        max,
         "aria-invalid": !!p.errors[name],
-        "aria-describedby": p.errors[name] ? `${fieldId}-error` : undefined,
+        "aria-describedby":
+            [help && `${fieldId}-help`, p.errors[name] && `${fieldId}-error`]
+                .filter(Boolean)
+                .join(" ") || undefined,
     };
     return (
         <div
@@ -165,7 +190,7 @@ export function Field({ field, record = {}, useOld = true }) {
                 <textarea {...common} rows="4" defaultValue={value} />
             ) : type === "select" ? (
                 <select {...common} defaultValue={value}>
-                    <option value="">{t("S\xE9lectionner\u2026")}</option>
+                    <option value="">{t(emptyLabel)}</option>
                     {Object.entries(options).map(([key, label]) => (
                         <option key={key} value={key}>
                             {t(label)}
@@ -193,11 +218,11 @@ export function Field({ field, record = {}, useOld = true }) {
                 </div>
             ) : type === "checkbox" ? (
                 <label className="check">
-                    <input type="hidden" name={name} value="false" />
+                    <input type="hidden" name={name} value="0" />
                     <input
                         type="checkbox"
                         {...common}
-                        value="true"
+                        value="1"
                         defaultChecked={checked(value)}
                     />
                     {t(label)}
@@ -208,6 +233,34 @@ export function Field({ field, record = {}, useOld = true }) {
                     type="file"
                     accept="image/png,image/jpeg,image/gif"
                 />
+            ) : type === "password" ? (
+                <div className="password-input">
+                    <input
+                        {...common}
+                        type={showPassword ? "text" : "password"}
+                        defaultValue=""
+                    />
+                    <button
+                        type="button"
+                        aria-label={
+                            showPassword
+                                ? "Masquer le mot de passe"
+                                : "Afficher le mot de passe"
+                        }
+                        title={
+                            showPassword
+                                ? "Masquer le mot de passe"
+                                : "Afficher le mot de passe"
+                        }
+                        onClick={() => setShowPassword((visible) => !visible)}
+                    >
+                        {showPassword ? (
+                            <EyeOff size={17} />
+                        ) : (
+                            <Eye size={17} />
+                        )}
+                    </button>
+                </div>
             ) : (
                 <input
                     {...common}
@@ -228,6 +281,11 @@ export function Field({ field, record = {}, useOld = true }) {
                                 : value
                     }
                 />
+            )}
+            {help && (
+                <small id={`${fieldId}-help`} className="field-help">
+                    {help}
+                </small>
             )}
             {p.errors[name] && (
                 <small id={`${fieldId}-error`} className="error-text">
@@ -279,21 +337,38 @@ export function Pagination({ rows }) {
 export function Filters({ status = false }) {
     const navigate = useNavigate();
     const params = new URLSearchParams(window.location.search);
+    const [query, setQuery] = useState(params.get("q") || "");
+    const [statusValue, setStatusValue] = useState(params.get("status") || "");
+    const firstRender = useRef(true);
+    const destination = () => {
+        const next = new URLSearchParams();
+        if (query.trim()) next.set("q", query.trim());
+        if (status && statusValue) next.set("status", statusValue);
+        return (
+            window.location.pathname + (next.size ? `?${next.toString()}` : "")
+        );
+    };
+
+    useEffect(() => {
+        if (firstRender.current) {
+            firstRender.current = false;
+            return;
+        }
+        const timer = window.setTimeout(() => {
+            const target = destination();
+            const current = window.location.pathname + window.location.search;
+            if (target !== current) navigate(target, { replace: true });
+        }, 350);
+        return () => window.clearTimeout(timer);
+    }, [query, statusValue, status, navigate]);
+
     return (
         <form
             method="GET"
             className="filters"
             onSubmit={(event) => {
                 event.preventDefault();
-                const query = new URLSearchParams(
-                    [...new FormData(event.currentTarget).entries()].filter(
-                        ([, value]) => value !== "",
-                    ),
-                );
-                navigate(
-                    window.location.pathname +
-                        (query.size ? `?${query.toString()}` : ""),
-                );
+                navigate(destination());
             }}
         >
             <div className="search">
@@ -301,15 +376,18 @@ export function Filters({ status = false }) {
                 <input
                     aria-label={t("Rechercher")}
                     name="q"
+                    type="search"
                     placeholder="Rechercher un nom, une référence…"
-                    defaultValue={params.get("q") || ""}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
                 />
             </div>
             {status && (
                 <select
                     aria-label={t("Statut")}
                     name="status"
-                    defaultValue={params.get("status") ?? ""}
+                    value={statusValue}
+                    onChange={(event) => setStatusValue(event.target.value)}
                 >
                     <option value="">{t("Tous les statuts")}</option>
                     {Object.entries(statuses).map(([key, value]) => (
@@ -348,7 +426,6 @@ export function Heading({ children }) {
     return (
         <div className="heading">
             <div>
-                <div className="eyebrow">{t("VOTRE ESPACE LABORATOIRE")}</div>
                 <h1>{t(p.title)}</h1>
                 <p>
                     {t(

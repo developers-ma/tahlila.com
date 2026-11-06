@@ -1,12 +1,19 @@
 import { t } from "./i18n";
-import { ArrowRight, Check, FlaskConical } from "lucide-react";
+import {
+    ArrowRight,
+    Check,
+    FlaskConical,
+    HeartPulse,
+    LockKeyhole,
+    ShieldCheck,
+    UserRound,
+} from "lucide-react";
 import { p } from "./data";
 import { Button, Form, Field } from "./components";
 export function Auth() {
     const mode = p.screen.slice(5);
     const titles = {
         login: t("Heureux de vous retrouver."),
-        register: t("Votre espace commence ici."),
         "forgot-password": t("Retrouvons votre acc\xE8s."),
         "reset-password": t("Un nouveau d\xE9part."),
         "confirm-password": t("Confirmez votre identit\xE9."),
@@ -56,6 +63,36 @@ export function Auth() {
             </div>
             <main>
                 <div className="auth-form">
+                    {mode === "login" && p.patientPortalEnabled && (
+                        <div
+                            className="auth-persona-switch"
+                            aria-label={t("Choisir votre espace")}
+                        >
+                            <a className="active" href="/login">
+                                <UserRound size={17} />
+                                <span>
+                                    <strong>{t("Personnel")}</strong>
+                                    <small>
+                                        {t("Administration du laboratoire")}
+                                    </small>
+                                </span>
+                            </a>
+                            <a href="/patient/login">
+                                <HeartPulse size={17} />
+                                <span>
+                                    <strong>{t("Patient")}</strong>
+                                    <small>{t("Résultats et analyses")}</small>
+                                </span>
+                            </a>
+                        </div>
+                    )}
+                    <span className="auth-form-icon">
+                        {mode === "login" ? (
+                            <LockKeyhole size={21} />
+                        ) : (
+                            <ShieldCheck size={21} />
+                        )}
+                    </span>
                     <small className="eyebrow">
                         {t("BIENVENUE CHEZ TAHLILA")}
                     </small>
@@ -78,15 +115,6 @@ export function Auth() {
                             <input type="hidden" name="token" value={p.token} />
                         )}
                         <div className="form-grid">
-                            {mode === "register" && (
-                                <Field
-                                    field={{
-                                        name: "name",
-                                        label: t("Nom complet"),
-                                        required: true,
-                                    }}
-                                />
-                            )}
                             {!["verify-email", "confirm-password"].includes(
                                 mode,
                             ) && (
@@ -114,7 +142,7 @@ export function Auth() {
                                     }}
                                 />
                             )}
-                            {["register", "reset-password"].includes(mode) && (
+                            {mode === "reset-password" && (
                                 <Field
                                     field={{
                                         name: "password_confirmation",
@@ -148,14 +176,24 @@ export function Auth() {
                             <ArrowRight size={18} />
                         </Button>
                     </Form>
+                    {mode === "login" && (
+                        <div className="auth-security-note">
+                            <ShieldCheck size={16} />
+                            <span>
+                                <strong>
+                                    {t("Connexion professionnelle sécurisée")}
+                                </strong>
+                                <small>
+                                    {t(
+                                        "Accès réservé au personnel autorisé du laboratoire.",
+                                    )}
+                                </small>
+                            </span>
+                        </div>
+                    )}
                     {mode !== "login" && (
                         <a className="cancel-link" href="/login">
                             {t("Retour \xE0 la connexion")}
-                        </a>
-                    )}
-                    {mode === "login" && (
-                        <a className="cancel-link" href="/register">
-                            {t("Cr\xE9er un compte")}
                         </a>
                     )}
                 </div>

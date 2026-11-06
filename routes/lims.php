@@ -4,38 +4,41 @@ use App\Http\Controllers\LimsPageController;
 use Illuminate\Support\Facades\Route;
 
 $protectedPages = [
-    '/' => ['dashboard', 'dashboard.root'],
-    '/dashboard' => ['dashboard', 'dashboard'],
-    '/new-test' => ['newtest', 'newtest'],
-    '/tests' => ['tests', 'tests'],
-    '/tests/create' => ['order', 'tests.create'],
-    '/tests/{id}/edit' => ['order', 'tests.edit'],
-    '/tests/{id}' => ['result', 'tests.show'],
-    '/results' => ['results', 'results'],
-    '/results/{id}/edit' => ['result', 'results.edit'],
-    '/invoices' => ['invoices', 'invoices'],
-    '/invoice/{id}' => ['invoice', 'invoice.generateInvoice'],
-    '/all-barcodes' => ['all-barcodes', 'all-barcodes'],
-    '/test/barcodes/{id}' => ['barcode', 'barcodes'],
-    '/print/result/{id}' => ['report', 'results.report'],
-    '/staff' => ['staff', 'staff'],
-    '/email' => ['email', 'email'],
-    '/settings' => ['settings', 'settings'],
-    '/update' => ['update', 'update'],
-    '/profile' => ['profile', 'profile.edit'],
-    '/languages' => ['languages', 'settings.languages'],
-    '/languages/{id}/edit' => ['language', 'languages.edit'],
-    '/stocks' => ['stocks', 'stocks'],
-    '/product/create' => ['stocks.create', 'stocks.create'],
-    '/product/{id}/edit' => ['stocks.edit', 'products.edit'],
-    '/category/create' => ['categories.create', 'category.create'],
-    '/group/create' => ['groups.create', 'group.create'],
-    '/history/patient/{id}' => ['patient-history', 'patients.history'],
-    '/setting/payment' => ['setting.payment', 'settings.payment'],
-    '/setting/laboratory' => ['setting.laboratory', 'settings.laboratory'],
-    '/setting/email' => ['setting.email', 'settings.email'],
-    '/setting/colors' => ['setting.colors', 'settings.colors.index'],
-    '/setting/license' => ['setting.license', 'settings.license'],
+    '/' => ['dashboard', 'dashboard.root', 'dashboard.view'],
+    '/dashboard' => ['dashboard', 'dashboard', 'dashboard.view'],
+    '/new-test' => ['newtest', 'newtest', 'orders.manage'],
+    '/tests' => ['tests', 'tests', 'orders.manage'],
+    '/tests/create' => ['order', 'tests.create', 'orders.manage'],
+    '/tests/{id}/edit' => ['order', 'tests.edit', 'orders.manage'],
+    '/tests/{id}' => ['result', 'tests.show', 'results.manage'],
+    '/results' => ['results', 'results', 'results.manage'],
+    '/results/{id}/edit' => ['result', 'results.edit', 'results.manage'],
+    '/invoices' => ['invoices', 'invoices', 'invoices.manage'],
+    '/invoice/{id}' => ['invoice', 'invoice.generateInvoice', 'invoices.manage'],
+    '/all-barcodes' => ['all-barcodes', 'all-barcodes', 'collection.manage'],
+    '/test/barcodes/{id}' => ['barcode', 'barcodes', 'collection.manage'],
+    '/print/result/{id}' => ['report', 'results.report', 'results.manage'],
+    '/staff' => ['staff', 'staff', 'staff.manage'],
+    '/staff/create' => ['staff.create', 'staff.create', 'staff.manage'],
+    '/staff/{id}/edit' => ['staff.edit', 'staff.edit', 'staff.manage'],
+    '/email' => ['email', 'email', 'email.send'],
+    '/settings' => ['settings', 'settings', 'settings.manage'],
+    '/update' => ['update', 'update', 'settings.manage'],
+    '/profile' => ['profile', 'profile.edit', null],
+    '/languages' => ['languages', 'settings.languages', 'settings.manage'],
+    '/languages/{id}/edit' => ['language', 'languages.edit', 'settings.manage'],
+    '/stocks' => ['stocks', 'stocks', 'inventory.manage'],
+    '/product/create' => ['stocks.create', 'stocks.create', 'inventory.manage'],
+    '/product/{id}/edit' => ['stocks.edit', 'products.edit', 'inventory.manage'],
+    '/category/create' => ['categories.create', 'category.create', 'catalog.manage'],
+    '/group/create' => ['groups.create', 'group.create', 'catalog.manage'],
+    '/history/patient/{id}' => ['patient-history', 'patients.history', 'patients.manage'],
+    '/setting/payment' => ['setting.payment', 'settings.payment', 'settings.manage'],
+    '/setting/laboratory' => ['setting.laboratory', 'settings.laboratory', 'settings.manage'],
+    '/setting/email' => ['setting.email', 'settings.email', 'settings.manage'],
+    '/setting/colors' => ['setting.colors', 'settings.colors.index', 'settings.manage'],
+    '/setting/patient-portal' => ['setting.patient-portal', 'settings.patient-portal', 'settings.manage'],
+    '/setting/license' => ['setting.license', 'settings.license', 'settings.manage'],
 ];
 
 foreach (['patients', 'prices', 'categories', 'groups'] as $resource) {
@@ -43,21 +46,26 @@ foreach (['patients', 'prices', 'categories', 'groups'] as $resource) {
         'prices', 'categories', 'groups' => $resource,
         default => $resource.'.index',
     };
-    $protectedPages['/'.$resource] = [$resource, $indexName];
-    $protectedPages['/'.$resource.'/create'] = [$resource.'.create', $resource.'.create'];
-    $protectedPages['/'.$resource.'/{id}/edit'] = [$resource.'.edit', $resource.'.edit'];
+    $permission = $resource === 'patients' ? 'patients.manage' : 'catalog.manage';
+    $protectedPages['/'.$resource] = [$resource, $indexName, $permission];
+    $protectedPages['/'.$resource.'/create'] = [$resource.'.create', $resource.'.create', $permission];
+    $protectedPages['/'.$resource.'/{id}/edit'] = [$resource.'.edit', $resource.'.edit', $permission];
     $protectedPages['/'.$resource.'/{id}'] = [
         $resource === 'patients' ? 'patient-history' : $resource.'.edit',
         $resource.'.show',
+        $permission,
     ];
 }
 
 $guestPages = [
     '/login' => ['auth.login', 'login'],
-    '/register' => ['auth.register', 'register'],
     '/forgot-password' => ['auth.forgot-password', 'password.request'],
     '/reset-password/{token}' => ['auth.reset-password', 'password.reset'],
 ];
+
+// Public staff registration is disabled. Patients initialize their separate
+// portal account from the email already verified in their patient record.
+Route::get('/register', fn () => redirect('/patient/login'))->name('register');
 
 $accountPages = [
     '/verify-email' => ['auth.verify-email', 'verification.notice'],
@@ -65,15 +73,22 @@ $accountPages = [
 ];
 
 $registerPages = function (array $pages, string|array $action, bool $named = true): void {
-    foreach ($pages as $uri => [$screen, $name]) {
+    foreach ($pages as $uri => $definition) {
+        [$screen, $name] = $definition;
+        $permission = $definition[2] ?? null;
         $route = Route::get($uri, $action)->defaults('screen', $screen);
-        if ($named) $route->name($name);
+        if ($permission) {
+            $route->middleware('permission:'.$permission);
+        }
+        if ($named) {
+            $route->name($name);
+        }
     }
 };
 
 Route::middleware(['auth', 'verified'])->group(function () use ($registerPages, $protectedPages) {
     $registerPages($protectedPages, LimsPageController::class);
-    Route::get('/print/result', fn () => redirect('/results'))->name('results.print');
+    Route::get('/print/result', fn () => redirect('/results'))->middleware('permission:results.manage')->name('results.print');
 });
 
 Route::middleware('guest')->group(function () use ($registerPages, $guestPages) {

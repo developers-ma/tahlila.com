@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Group;
 use App\Models\Patient;
 use App\Models\Price;
+use App\Models\Role;
 use App\Models\Stock;
 use App\Models\Test;
 use App\Models\User;
@@ -19,11 +20,12 @@ class DatabaseSeeder extends Seeder
     {
         DB::transaction(function (): void {
             foreach ([
-                ['name' => 'Tahlila Administrator', 'email' => 'admin@tahlila.test'],
-                ['name' => 'Reception Desk', 'email' => 'reception@tahlila.test'],
+                ['name' => 'Tahlila Administrator', 'email' => 'admin@tahlila.test', 'role' => 'administrator'],
+                ['name' => 'Reception Desk', 'email' => 'reception@tahlila.test', 'role' => 'reception'],
             ] as $user) {
                 User::updateOrCreate(['email' => $user['email']], [
                     'name' => $user['name'], 'password' => Hash::make('password'), 'email_verified_at' => now(),
+                    'role_id' => Role::where('slug', $user['role'])->value('id'),
                 ]);
             }
 
@@ -46,6 +48,7 @@ class DatabaseSeeder extends Seeder
                 ]);
                 $price->categories()->syncWithoutDetaching([$categories[$data['category']]->id]);
                 $price->groups()->syncWithoutDetaching([$groups[$data['group']]->id]);
+
                 return $price;
             })->keyBy('test_name');
 

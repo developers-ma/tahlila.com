@@ -1,6 +1,6 @@
 import { t } from "./i18n";
 import { ArrowUpRight, Plus } from "lucide-react";
-import { p, money, date, name } from "./data";
+import { can, p, money, date, name } from "./data";
 import {
     Button,
     Status,
@@ -11,6 +11,17 @@ import {
     Filters,
 } from "./components";
 export function OrderTable({ rows = p.rows, mode = p.screen }) {
+    const recordHref = (row) => {
+        if (mode === "invoices" && can("invoices.manage"))
+            return `/invoice/${row.id}`;
+        if (mode === "all-barcodes" && can("collection.manage"))
+            return `/test/barcodes/${row.id}`;
+        if (can("results.manage")) return `/tests/${row.id}`;
+        if (can("orders.manage")) return `/tests/${row.id}/edit`;
+        if (can("collection.manage")) return `/test/barcodes/${row.id}`;
+        if (can("invoices.manage")) return `/invoice/${row.id}`;
+        return undefined;
+    };
     return (
         <>
             <div className="table-scroll">
@@ -34,7 +45,7 @@ export function OrderTable({ rows = p.rows, mode = p.screen }) {
                                 <td>
                                     <a
                                         className="patient-cell"
-                                        href={`/tests/${row.id}`}
+                                        href={recordHref(row)}
                                     >
                                         <span className="initial">
                                             {row.patient?.firstname?.[0]}
@@ -66,35 +77,34 @@ export function OrderTable({ rows = p.rows, mode = p.screen }) {
                                 </td>
                                 <td>
                                     <div className="row-actions">
-                                        <a
-                                            className="text-action"
-                                            href={
-                                                mode === "invoices"
-                                                    ? `/invoice/${row.id}`
+                                        {recordHref(row) && (
+                                            <a
+                                                className="text-action"
+                                                href={recordHref(row)}
+                                            >
+                                                {mode === "invoices"
+                                                    ? t("Facture")
                                                     : mode === "all-barcodes"
-                                                      ? `/test/barcodes/${row.id}`
-                                                      : `/tests/${row.id}`
-                                            }
-                                        >
-                                            {mode === "invoices"
-                                                ? t("Facture")
-                                                : mode === "all-barcodes"
-                                                  ? t("Pr\xE9lever")
-                                                  : t("Ouvrir")}{" "}
-                                            <ArrowUpRight size={15} />
-                                        </a>
-                                        <a
-                                            href={`/tests/${row.id}/edit`}
-                                            className="subtle"
-                                        >
-                                            {t("Modifier")}
-                                        </a>
-                                        {mode !== "dashboard" && (
-                                            <Delete
-                                                action={`/tests/${row.id}`}
-                                                label="Supprimer ce dossier et tous ses résultats ?"
-                                            />
+                                                      ? t("Pr\xE9lever")
+                                                      : t("Ouvrir")}{" "}
+                                                <ArrowUpRight size={15} />
+                                            </a>
                                         )}
+                                        {can("orders.manage") && (
+                                            <a
+                                                href={`/tests/${row.id}/edit`}
+                                                className="subtle"
+                                            >
+                                                {t("Modifier")}
+                                            </a>
+                                        )}
+                                        {mode !== "dashboard" &&
+                                            can("orders.manage") && (
+                                                <Delete
+                                                    action={`/tests/${row.id}`}
+                                                    label="Supprimer ce dossier et tous ses résultats ?"
+                                                />
+                                            )}
                                     </div>
                                 </td>
                             </tr>
@@ -111,10 +121,12 @@ export function ListPage() {
     return (
         <>
             <Heading>
-                <Button href="/new-test">
-                    <Plus size={18} />
-                    {t("Nouvelle analyse")}
-                </Button>
+                {can("orders.manage") && (
+                    <Button href="/new-test">
+                        <Plus size={18} />
+                        {t("Nouvelle analyse")}
+                    </Button>
+                )}
             </Heading>
             <section className="panel">
                 <Filters status />

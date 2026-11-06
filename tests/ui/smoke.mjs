@@ -84,7 +84,39 @@ for (const page of pages) {
             "JSON page data was not rendered after client navigation",
         );
     }
-    if (!page.screen.startsWith("auth.")) {
+    if (page.screen === "patients") {
+        const search = dom.window.document.querySelector(
+            '.filters input[name="q"]',
+        );
+        assert.ok(search, "patients: missing search input");
+        search.focus();
+        Object.getOwnPropertyDescriptor(
+            dom.window.HTMLInputElement.prototype,
+            "value",
+        ).set.call(search, "Test Patient");
+        search.dispatchEvent(
+            new dom.window.Event("input", { bubbles: true, cancelable: true }),
+        );
+        await new Promise((resolve) => setTimeout(resolve, 450));
+        assert.equal(
+            dom.window.location.search,
+            "?q=Test+Patient",
+            "search input must update the URL automatically after debounce",
+        );
+        assert.ok(
+            requests.includes("/api/lims/patients?q=Test+Patient"),
+            "automatic search must load filtered data from the Laravel JSON API",
+        );
+        assert.equal(
+            dom.window.document.activeElement,
+            search,
+            "automatic search must preserve focus in the input",
+        );
+    }
+    if (
+        !page.screen.startsWith("auth.") &&
+        !page.screen.startsWith("patient.")
+    ) {
         assert.ok(
             dom.window.document.querySelector("nav"),
             `${page.path}: missing navigation`,
@@ -99,6 +131,62 @@ for (const page of pages) {
             null,
             `${page.path}: legacy workspace block is still rendered`,
         );
+        assert.ok(
+            dom.window.document.querySelector(
+                '.nav-section > a[href="/patients"]',
+            ),
+            `${page.path}: standard sidebar links must not be wrapped by submenu containers`,
+        );
+        assert.equal(
+            dom.window.document.querySelectorAll(".nav-group > a.active")
+                .length,
+            0,
+            `${page.path}: catalogue parent and child must not both be active`,
+        );
+        const testsMenu = dom.window.document.querySelector(
+            ".nav-group > .nav-parent",
+        );
+        assert.ok(testsMenu, `${page.path}: missing Tests navigation group`);
+        assert.ok(
+            testsMenu.textContent.includes(
+                page.dictionary?.Tests ||
+                    (page.locale === "en" ? "Tests" : "Tests"),
+            ),
+            `${page.path}: Tests navigation label is not translated`,
+        );
+        const currentPath = dom.window.location.pathname;
+        const catalogueActive = ["/prices", "/groups", "/categories"].some(
+            (path) =>
+                currentPath === path || currentPath.startsWith(`${path}/`),
+        );
+        assert.equal(
+            dom.window.document.querySelectorAll(".nav-sublist > a").length,
+            catalogueActive ? 3 : 0,
+            `${page.path}: catalogue submenu has the wrong collapsed state`,
+        );
+        if (page.screen === "patients") {
+            const catalogueToggle = dom.window.document.querySelector(
+                ".nav-group > .nav-parent",
+            );
+            assert.equal(
+                catalogueToggle.getAttribute("aria-expanded"),
+                "false",
+            );
+            catalogueToggle.click();
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            assert.equal(
+                dom.window.document.querySelectorAll(".nav-sublist > a").length,
+                3,
+                "catalogue submenu must open when clicked",
+            );
+            catalogueToggle.click();
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            assert.equal(
+                dom.window.document.querySelectorAll(".nav-sublist > a").length,
+                0,
+                "catalogue submenu must close when clicked again",
+            );
+        }
     }
     assert.ok(
         !dom.window.document.body.textContent.includes("[object Object]"),
@@ -127,6 +215,23 @@ for (const page of pages) {
         assert.ok(data.get("_token"));
     }
     if (page.screen === "barcode") {
+        assert.ok(
+            dom.window.document.querySelector(".collection-workspace"),
+            "barcode page: missing organized collection workflow",
+        );
+        assert.equal(
+            dom.window.document.querySelectorAll(".collection-card").length,
+            3,
+            "barcode page: collection steps are incomplete",
+        );
+        assert.ok(
+            dom.window.document.querySelector(".print-setup-card"),
+            "barcode page: missing print control panel",
+        );
+        assert.ok(
+            dom.window.document.querySelector(".tube-counter"),
+            "barcode page: missing tube counters",
+        );
         const label = dom.window.document.querySelector(".barcode-label");
         assert.ok(label, "barcode page: missing thermal tube label");
         assert.ok(
@@ -144,12 +249,245 @@ for (const page of pages) {
             "barcode page: missing patient identity",
         );
         assert.equal(
-            dom.window.document.querySelector(".labels").classList.contains(
-                "labels-50x25",
-            ),
+            dom.window.document
+                .querySelector(".labels")
+                .classList.contains("labels-50x25"),
             true,
             "barcode page: thermal 50x25 format must be the default",
         );
+    }
+    if (page.screen === "invoice") {
+        const invoice = dom.window.document.querySelector(".invoice-document");
+        assert.ok(
+            invoice,
+            "invoice page: missing professional invoice document",
+        );
+        assert.ok(
+            invoice.querySelector(".invoice-brand"),
+            "invoice page: missing laboratory identity",
+        );
+        assert.equal(
+            invoice.querySelectorAll(".invoice-party").length,
+            3,
+            "invoice page: issuer, patient and dossier sections are required",
+        );
+        assert.equal(
+            invoice.querySelectorAll(".invoice-table tbody tr").length,
+            page.lines.length,
+            "invoice page: analysis lines do not match the dossier",
+        );
+        assert.ok(
+            invoice.querySelector(".invoice-summary-balance"),
+            "invoice page: missing payment balance summary",
+        );
+        assert.ok(
+            invoice.querySelector(".invoice-footer"),
+            "invoice page: missing printable professional footer",
+        );
+        assert.ok(
+            dom.window.document.querySelector(
+                '.invoice-payment-editor input[name="remaining_or_give"]',
+            ),
+            "invoice page: payment workflow was lost",
+        );
+    }
+    if (page.screen === "staff") {
+        assert.ok(
+            dom.window.document.querySelector(
+                '.heading a[href="/staff/create"]',
+            ),
+            "staff page: missing add collaborator action",
+        );
+        assert.equal(
+            dom.window.document.querySelectorAll(".staff-list tbody tr").length,
+            page.users.length,
+            "staff page: user list is incomplete",
+        );
+    }
+    if (["staff.create", "staff.edit"].includes(page.screen)) {
+        assert.ok(
+            dom.window.document.querySelector(".staff-form"),
+            `${page.path}: missing staff access form`,
+        );
+        assert.equal(
+            dom.window.document.querySelectorAll(
+                '.role-selector input[name="role_id"]',
+            ).length,
+            page.roles.length,
+            `${page.path}: role selector is incomplete`,
+        );
+        assert.equal(
+            dom.window.document.querySelectorAll(
+                '.permission-grid input[name="permissions[]"]',
+            ).length,
+            page.permissionGroups.flat().length,
+            `${page.path}: permission registry is incomplete`,
+        );
+        if (page.screen === "staff.create") {
+            const nonAdministrator = page.roles.find(
+                (role) => role.slug !== "administrator",
+            );
+            const roleInput = dom.window.document.querySelector(
+                `.role-selector input[value="${nonAdministrator.id}"]`,
+            );
+            roleInput.click();
+            await new Promise((resolve) => setTimeout(resolve, 0));
+
+            const permissionInputs = [
+                ...dom.window.document.querySelectorAll(
+                    '.permission-grid input[name="permissions[]"]',
+                ),
+            ];
+            assert.ok(
+                dom.window.document.querySelector(".permission-toolbar"),
+                "staff create: non-admin permissions need bulk controls",
+            );
+            assert.ok(
+                permissionInputs.every((input) => !input.disabled),
+                "staff create: every non-admin permission must remain editable",
+            );
+
+            const clearButton = dom.window.document.querySelector(
+                '[data-permission-action="clear-all"]',
+            );
+            clearButton.click();
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            assert.ok(
+                permissionInputs.every((input) => !input.checked),
+                "staff create: role suggestions must be removable",
+            );
+        }
+    }
+    if (
+        [
+            "patient.login",
+            "patient.forgot-password",
+            "patient.reset-password",
+        ].includes(page.screen)
+    ) {
+        assert.ok(
+            dom.window.document.querySelector(".patient-auth-shell"),
+            `${page.path}: missing professional patient authentication`,
+        );
+        assert.ok(
+            dom.window.document.querySelector(
+                '.patient-login-form input[name="email"]',
+            ),
+            `${page.path}: missing patient email input`,
+        );
+        if (page.screen === "patient.login") {
+            assert.equal(
+                dom.window.document.querySelectorAll(".auth-persona-switch a")
+                    .length,
+                2,
+                "patient login: staff/patient portal switch is missing",
+            );
+        }
+    }
+    if (page.screen === "auth.login") {
+        assert.equal(
+            dom.window.document.querySelectorAll(".auth-persona-switch a")
+                .length,
+            page.patientPortalEnabled ? 2 : 0,
+            "staff login: patient portal switch does not match its activation setting",
+        );
+        assert.ok(
+            dom.window.document.querySelector(".auth-security-note"),
+            "staff login: security assurance is missing",
+        );
+    }
+    if (page.screen === "patient.dashboard") {
+        assert.ok(
+            dom.window.document.querySelector(".patient-portal"),
+            "patient dashboard: missing portal shell",
+        );
+        assert.equal(
+            dom.window.document.querySelectorAll(
+                ".patient-order-list > article",
+            ).length,
+            page.orders.length,
+            "patient dashboard: dossier list is incomplete",
+        );
+        assert.ok(
+            dom.window.document.querySelector(".patient-profile-card"),
+            "patient dashboard: missing patient profile summary",
+        );
+    }
+    if (page.screen === "patient.result") {
+        assert.ok(
+            dom.window.document.querySelector(".patient-result-document"),
+            "patient result: missing printable result document",
+        );
+        assert.equal(
+            dom.window.document.querySelectorAll(
+                ".patient-result-list > section",
+            ).length,
+            page.lines.length,
+            "patient result: analysis lines are incomplete",
+        );
+    }
+    if (
+        page.resource === "settings" ||
+        ["profile", "languages", "language", "update"].includes(page.screen) ||
+        page.kind === "info"
+    ) {
+        assert.ok(
+            dom.window.document.querySelector(".settings-workspace"),
+            `${page.path}: missing professional settings workspace`,
+        );
+        assert.equal(
+            dom.window.document.querySelectorAll(".settings-local-nav nav a")
+                .length,
+            9,
+            `${page.path}: settings navigation is incomplete`,
+        );
+        assert.ok(
+            dom.window.document.querySelector(".settings-section"),
+            `${page.path}: missing structured settings section`,
+        );
+    }
+    if (page.resource === "settings" && page.kind === "form") {
+        assert.ok(
+            dom.window.document.querySelector(".settings-form"),
+            `${page.path}: missing dedicated settings form`,
+        );
+        for (const field of page.fields) {
+            assert.ok(
+                dom.window.document.querySelector(`[name="${field.name}"]`),
+                `${page.path}: missing setting field ${field.name}`,
+            );
+        }
+        if (page.screen === "setting.colors") {
+            const resetButton = dom.window.document.querySelector(
+                'button[formaction="/setting/colors/reset"]',
+            );
+            assert.ok(
+                resetButton,
+                "colors settings: missing default palette reset action",
+            );
+            assert.equal(
+                resetButton.getAttribute("formnovalidate"),
+                "",
+                "colors settings: reset must not depend on current field validation",
+            );
+        }
+    }
+    if (page.screen === "email") {
+        assert.ok(
+            dom.window.document.querySelector('a[href="/setting/email"]'),
+            "mailbox: settings must remain directly accessible",
+        );
+        if (!page.mailConfigured) {
+            assert.ok(
+                dom.window.document.querySelector(".mail-setup"),
+                "mailbox: first-time configuration screen is missing",
+            );
+        } else {
+            assert.ok(
+                dom.window.document.querySelector(".mailbox-shell"),
+                "mailbox: synchronized workspace is missing",
+            );
+        }
     }
     dom.window.close();
     count++;

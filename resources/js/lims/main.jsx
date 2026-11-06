@@ -1,19 +1,29 @@
 import { t } from "./i18n";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Plus, ShieldCheck, Users } from "lucide-react";
-import { p, date, replacePage } from "./data";
+import { ArrowRight, Plus, Users } from "lucide-react";
+import { p, replacePage } from "./data";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, useLocation, useNavigate } from "react-router-dom";
 import "./style.css";
 import { Layout } from "./Layout";
-import { Button, Heading, Empty } from "./components";
+import { Heading, Empty } from "./components";
 import { Dashboard } from "./Dashboard";
 import { ResourceList, ResourceForm } from "./ResourceForms";
 import { ListPage } from "./Resources";
 import { OrderForm } from "./Orders";
 import { Results, Invoice, Report, BarcodePage } from "./Documents";
-import { SettingsPage, Profile, Languages, LanguageEditor } from "./Settings";
+import {
+    SettingsPage,
+    SettingsForm,
+    SettingsInfo,
+    Profile,
+    Languages,
+    LanguageEditor,
+} from "./Settings";
 import { Auth } from "./Auth";
+import { StaffForm, StaffPage } from "./Staff";
+import { PatientPortal } from "./PatientPortal";
+import { Mailbox } from "./Mailbox";
 function applyPageAppearance() {
     document.documentElement.dir = p.dictionary?.dir === "rtl" ? "rtl" : "ltr";
     document.title = `${p.title} · Tahlila`;
@@ -40,21 +50,10 @@ function applyPageAppearance() {
 }
 applyPageAppearance();
 function Content() {
+    if (p.kind === "form" && p.resource === "settings") return <SettingsForm />;
     if (p.kind === "form") return <ResourceForm />;
     if (p.kind === "resource") return <ResourceList />;
-    if (p.kind === "info")
-        return (
-            <>
-                <Heading />
-                <section className="panel form-panel">
-                    <ShieldCheck size={32} />
-                    <p>{p.message}</p>
-                    <Button secondary href="/settings">
-                        Retour aux paramètres
-                    </Button>
-                </section>
-            </>
-        );
+    if (p.kind === "info") return <SettingsInfo />;
     switch (p.screen) {
         case "dashboard":
             return <Dashboard />;
@@ -115,37 +114,12 @@ function Content() {
                 </>
             );
         case "staff":
-            return (
-                <>
-                    <Heading />
-                    <section className="panel">
-                        <div className="section-heading">
-                            <h2>Comptes enregistrés</h2>
-                            <span className="count">{p.users.length}</span>
-                        </div>
-                        <div className="table-scroll">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>{t("Collaborateur")}</th>
-                                        <th>{t("E-mail")}</th>
-                                        <th>{t("Depuis le")}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {p.users.map((u) => (
-                                        <tr key={u.id}>
-                                            <td className="strong">{u.name}</td>
-                                            <td>{u.email}</td>
-                                            <td>{date(u.created_at)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                </>
-            );
+            return <StaffPage />;
+        case "email":
+            return <Mailbox />;
+        case "staff.create":
+        case "staff.edit":
+            return <StaffForm />;
         default:
             return <Empty />;
     }
@@ -221,7 +195,12 @@ function SpaApplication() {
         )
             .then(async (response) => {
                 if (response.status === 401) {
-                    navigate("/login", { replace: true });
+                    navigate(
+                        location.pathname.startsWith("/patient")
+                            ? "/patient/login"
+                            : "/login",
+                        { replace: true },
+                    );
                     return null;
                 }
                 if (!response.ok) {
@@ -264,11 +243,13 @@ function SpaApplication() {
                 }
                 onClickCapture={handleInternalLink}
             >
-                {p.screen.startsWith("auth.") ? (
+                {p.screen.startsWith("patient.") ? (
+                    <PatientPortal key={`${p.path}:${revision}`} />
+                ) : p.screen.startsWith("auth.") ? (
                     <Auth key={`${p.path}:${revision}`} />
                 ) : (
                     <Layout>
-                        <Content key={`${p.path}:${revision}`} />
+                        <Content key={p.path} />
                     </Layout>
                 )}
             </div>

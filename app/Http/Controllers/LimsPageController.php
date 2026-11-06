@@ -2,10 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{Patient, Test, Price, Category, Group, Stock, User, PaymentMethod, EmailSetting, LaboratorySetting, ColorSetting};
+use App\Models\Category;
+use App\Models\ColorSetting;
+use App\Models\EmailSetting;
+use App\Models\Group;
+use App\Models\LaboratorySetting;
+use App\Models\Patient;
+use App\Models\PatientAccount;
+use App\Models\PaymentMethod;
+use App\Models\Price;
+use App\Models\Role;
+use App\Models\Setting;
+use App\Models\Stock;
+use App\Models\Test;
+use App\Models\User;
+use App\Services\MailboxService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{DB, File};
+use Illuminate\Pagination\AbstractPaginator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Picqer\Barcode\BarcodeGeneratorSVG;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Throwable;
 
 /** Read models for the React UI. Writes continue through the existing Laravel controllers. */
 class LimsPageController extends Controller
@@ -39,7 +57,7 @@ class LimsPageController extends Controller
         );
         $path = preg_replace('#^api/lims#', '', $request->path());
         $page['path'] = '/'.ltrim($path ?: '/', '/');
-        if (($page['rows'] ?? null) instanceof \Illuminate\Pagination\AbstractPaginator) {
+        if (($page['rows'] ?? null) instanceof AbstractPaginator) {
             $page['rows']->withPath($page['path']);
         }
 
@@ -58,7 +76,11 @@ class LimsPageController extends Controller
         $locale = app()->getLocale();
         $dictionaryPath = preg_match('/^[a-zA-Z-]+$/', $locale) ? base_path("lang/$locale.json") : '';
         $dictionary = $dictionaryPath && File::exists($dictionaryPath) ? json_decode(File::get($dictionaryPath), true) : [];
-        $page = ['screen' => $screen, 'locale' => $locale, 'dictionary' => $dictionary, 'title' => 'Laboratoire', 'user' => $request->user()?->only('name', 'email'),
+        $currentUser = $request->user()?->loadMissing('role');
+        $page = ['screen' => $screen, 'locale' => $locale, 'dictionary' => $dictionary, 'title' => 'Laboratoire',
+            'user' => $currentUser ? [...$currentUser->only('name', 'email'), 'role' => $currentUser->role?->name] : null,
+            'permissions' => $currentUser?->permissionKeys() ?? [], 'isAdministrator' => $currentUser?->isAdministrator() ?? false,
+            'patientPortalEnabled' => (bool) Setting::value('patient_portal_enabled'),
             'csrf' => csrf_token(), 'errors' => collect(session('errors')?->getBags() ?? [])->flatMap(fn ($bag) => $bag->toArray())->all(),
             'old' => collect($request->old())->except(['password', 'password_confirmation', 'current_password', 'mail_password', '_token'])->all(),
             'flash' => session('success') ?? session('status') ?? session('error'),
@@ -101,7 +123,9 @@ class LimsPageController extends Controller
                 $page['kind'] = 'form';
                 $page['title'] = ($id ? 'Modifier · ' : 'Ajouter · ').$title;
                 $page['record'] = $record?->toArray() ?? [];
-                if ($record instanceof Patient) $page['record']['date_of_birth'] = $record->date_of_birth?->format('Y-m-d');
+                if ($record instanceof Patient) {
+                    $page['record']['date_of_birth'] = $record->date_of_birth?->format('Y-m-d');
+                }
                 if ($record instanceof Price) {
                     $page['record']['categories'] = $record->categories()->pluck('categories.id');
                     $page['record']['groups'] = $record->groups()->pluck('groups.id');
@@ -112,7 +136,11 @@ class LimsPageController extends Controller
                 $query = $model::query();
                 if ($search = $request->string('q')->toString()) {
                     $names = array_column(array_filter($fields, fn ($f) => in_array($f['type'], ['text', 'tel', 'email'])), 'name');
-                    $query->where(function ($q) use ($names, $search) { foreach ($names as $name) $q->orWhere($name, 'like', '%'.$search.'%'); });
+                    $query->where(function ($q) use ($names, $search) {
+                        foreach ($names as $name) {
+                            $q->orWhere($name, 'like', '%'.$search.'%');
+                        }
+                    });
                 }
                 $page['kind'] = 'resource';
                 $page['rows'] = $query->latest('id')->paginate(20)->withQueryString();
@@ -129,7 +157,9 @@ class LimsPageController extends Controller
                 $q = $request->string('q')->toString();
                 $query->where(fn ($query) => $query->where('id', $q)->orWhereHas('patient', fn ($p) => $p->where('firstname', 'like', "%$q%")->orWhere('lastname', 'like', "%$q%")->orWhere('id_card', 'like', "%$q%")));
             }
-            if (in_array($request->query('status'), ['0', '1', '2', '3'], true)) $query->where('test_status', $request->query('status'));
+            if (in_array($request->query('status'), ['0', '1', '2', '3'], true)) {
+                $query->where('test_status', $request->query('status'));
+            }
             $page['rows'] = $query->latest('id')->paginate(15)->withQueryString();
             $page['stats'] = ['patients' => Patient::count(), 'waiting' => Test::where('test_status', '1')->count(), 'processing' => Test::where('test_status', '2')->count(), 'ready' => Test::where('test_status', '3')->count(), 'paid' => Test::sum('paid_amount'), 'balance' => Test::where('remaining_or_give', '>', 0)->sum('remaining_or_give')];
             if ($screen === 'dashboard') {
@@ -155,60 +185,139 @@ class LimsPageController extends Controller
                 $page['groups'] = Group::all();
             }
             if ($test) {
-                $generator = new BarcodeGeneratorSVG();
+                $generator = new BarcodeGeneratorSVG;
                 $page['barcode'] = $generator->getBarcode((string) $test->id, $generator::TYPE_CODE_128);
-                if ($screen === 'barcode') $page['qrcode'] = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(70)->generate((string) $test->id);
+                if ($screen === 'barcode') {
+                    $page['qrcode'] = (string) QrCode::format('svg')->size(70)->generate((string) $test->id);
+                }
             }
-            if ($screen === 'barcode') $page['stocks'] = Stock::all();
+            if ($screen === 'barcode') {
+                $page['stocks'] = Stock::all();
+            }
         } elseif ($screen === 'settings') {
             $page['title'] = 'Votre laboratoire, à votre manière.';
         } elseif (str_starts_with($screen, 'setting.')) {
             $section = substr($screen, 8);
-            $page['kind'] = 'form'; $page['method'] = 'POST'; $page['action'] = '/setting/'.$section;
+            $page['kind'] = 'form';
+            $page['method'] = 'POST';
+            $page['action'] = '/setting/'.$section;
             $page['resource'] = 'settings';
             if ($section === 'payment') {
-                $page['title'] = 'Paiements & devise'; $page['record'] = PaymentMethod::first();
+                $page['title'] = 'Paiements & devise';
+                $page['record'] = PaymentMethod::first();
                 $page['fields'] = [$this->field('currency', 'Devise', 'text', true), $this->field('tax', 'Taxe (%)', 'number', true), $this->field('cash', 'Espèces', 'checkbox'), $this->field('pos', 'Carte bancaire', 'checkbox'), $this->field('bank_transfer', 'Virement', 'checkbox'), $this->field('cheque', 'Chèque', 'checkbox')];
             } elseif ($section === 'laboratory') {
-                $page['title'] = 'Identité du laboratoire'; $page['record'] = LaboratorySetting::first(); $page['action'] = '/laboratory-settings';
+                $page['title'] = 'Identité du laboratoire';
+                $page['record'] = LaboratorySetting::first();
+                $page['action'] = '/laboratory-settings';
                 $labels = ['laboratory_name' => 'Nom du laboratoire', 'managing_director' => 'Directeur', 'phone' => 'Téléphone', 'fax' => 'Fax', 'email' => 'E-mail', 'address' => 'Adresse', 'company_number' => 'Registre de commerce', 'tax_id' => 'Identifiant fiscal', 'footer_title1' => 'Pied de page 1', 'footer_title2' => 'Pied de page 2', 'footer_title3' => 'Pied de page 3'];
-                $page['fields'] = []; foreach ($labels as $name => $label) $page['fields'][] = $this->field($name, $label, $name === 'email' ? 'email' : 'text', $name !== 'fax');
+                $page['fields'] = [];
+                foreach ($labels as $name => $label) {
+                    $page['fields'][] = $this->field($name, $label, $name === 'email' ? 'email' : 'text', $name !== 'fax');
+                }
                 $page['fields'][] = $this->field('logo', 'Logo du laboratoire', 'file');
             } elseif ($section === 'email') {
-                $page['title'] = 'Messagerie du laboratoire'; $page['record'] = EmailSetting::first()?->toArray() ?? [];
+                $page['title'] = 'Messagerie du laboratoire';
+                $page['record'] = EmailSetting::first()?->toArray() ?? [];
                 $page['record']['send_email'] = $page['record']['email_notification'] ?? 'false';
-                $page['fields'] = []; foreach (['mail_host' => 'Serveur SMTP', 'mail_port' => 'Port', 'mail_username' => 'Identifiant', 'mail_password' => 'Nouveau mot de passe (vide : conserver)', 'mail_from_address' => 'Adresse d’expédition', 'mail_from_name' => 'Nom de l’expéditeur', 'mail_encryption' => 'Chiffrement (tls / ssl)'] as $name => $label) $page['fields'][] = $this->field($name, $label, $name === 'mail_password' ? 'password' : 'text', !in_array($name, ['mail_password', 'mail_encryption']));
+                $page['fields'] = [];
+                foreach (['mail_host' => 'Serveur SMTP', 'mail_port' => 'Port SMTP', 'mail_username' => 'Identifiant SMTP', 'mail_password' => 'Nouveau mot de passe SMTP (vide : conserver)', 'mail_from_address' => 'Adresse d’expédition', 'mail_from_name' => 'Nom de l’expéditeur', 'mail_encryption' => 'Chiffrement SMTP', 'imap_host' => 'Serveur IMAP', 'imap_port' => 'Port IMAP', 'imap_username' => 'Identifiant IMAP', 'imap_password' => 'Nouveau mot de passe IMAP (vide : conserver)', 'imap_encryption' => 'Chiffrement IMAP', 'imap_validate_cert' => 'Vérifier le certificat du serveur'] as $name => $label) {
+                    $type = str_contains($name, 'password') ? 'password' : ($name === 'imap_validate_cert' ? 'checkbox' : 'text');
+                    $page['fields'][] = $this->field($name, $label, $type, ! in_array($name, ['mail_password', 'mail_encryption', 'imap_password']));
+                }
                 $page['fields'][] = $this->field('send_email', 'Notification des résultats', 'checkbox');
             } elseif ($section === 'colors') {
-                $page['title'] = 'Couleurs du laboratoire'; $page['record'] = ColorSetting::first();
-                $page['fields'] = []; foreach (['primary', 'secondary', 'tertiary', 'neutral', 'background', 'font', 'success', 'info', 'warning', 'error'] as $color) $page['fields'][] = $this->field($color.'_color', ucfirst($color), 'color', true);
+                $page['title'] = 'Couleurs du laboratoire';
+                $page['record'] = ColorSetting::first();
+                $page['fields'] = [];
+                foreach (['primary', 'secondary', 'tertiary', 'neutral', 'background', 'font', 'success', 'info', 'warning', 'error'] as $color) {
+                    $page['fields'][] = $this->field($color.'_color', ucfirst($color), 'color', true);
+                }
+            } elseif ($section === 'patient-portal') {
+                $page['title'] = 'Espace patient';
+                $page['record'] = ['patient_portal_enabled' => (bool) Setting::value('patient_portal_enabled')];
+                $page['fields'] = [$this->field('patient_portal_enabled', 'Activer l’espace patient', 'checkbox')];
+                $page['portalStats'] = [
+                    'patientsWithEmail' => Patient::whereNotNull('email')->where('email', '!=', '')->count(),
+                    'accounts' => PatientAccount::count(),
+                    'activated' => PatientAccount::whereNotNull('password')->count(),
+                ];
             } else {
-                $page['kind'] = 'info'; $page['title'] = 'Licence'; $page['message'] = 'Aucun service de gestion de licence n’est configuré dans cette application. Contactez votre administrateur pour les informations de licence.';
+                $page['kind'] = 'info';
+                $page['title'] = 'Licence';
+                $page['message'] = 'Aucun service de gestion de licence n’est configuré dans cette application. Contactez votre administrateur pour les informations de licence.';
             }
         } elseif ($screen === 'staff') {
-            $page['title'] = 'Équipe du laboratoire'; $page['users'] = User::orderBy('name')->get(['id', 'name', 'email', 'created_at']);
+            $page['title'] = 'Équipe du laboratoire';
+            $page['users'] = User::with('role:id,name,slug')->orderBy('name')
+                ->get(['id', 'role_id', 'name', 'email', 'permissions', 'created_at'])
+                ->map(function (User $user): array {
+                    $data = $user->only('id', 'role_id', 'name', 'email', 'created_at');
+                    $data['role'] = $user->role?->only('id', 'name', 'slug');
+                    $data['permissions'] = $user->permissionKeys();
+
+                    return $data;
+                });
+        } elseif (in_array($screen, ['staff.create', 'staff.edit'], true)) {
+            $member = $id ? User::with('role')->findOrFail($id) : null;
+            $page['title'] = $member ? 'Modifier les accès · '.$member->name : 'Ajouter un collaborateur';
+            $page['record'] = $member
+                ? [...$member->only('id', 'name', 'email', 'role_id'), 'permissions' => $member->permissionKeys()]
+                : ['permissions' => []];
+            $page['roles'] = Role::orderBy('id')->get(['id', 'name', 'slug', 'description', 'permissions']);
+            $page['permissionGroups'] = collect(config('lims_permissions.permissions'))
+                ->map(fn (array $permission, string $key) => ['key' => $key, ...$permission])
+                ->groupBy('group')->values();
+            $page['action'] = $member ? '/staff/'.$member->id : '/staff';
+            $page['method'] = $member ? 'PUT' : 'POST';
         } elseif ($screen === 'email') {
-            $page += ['kind' => 'form', 'action' => '/email', 'method' => 'POST', 'resource' => 'dashboard', 'fields' => [$this->field('email', 'Destinataire', 'email', true), $this->field('subject', 'Objet', 'text', true), $this->field('message', 'Message', 'textarea', true)]];
-            $page['title'] = 'Envoyer un message';
+            $page['title'] = 'Messagerie';
+            $settings = EmailSetting::first();
+            $page['mailConfigured'] = $settings?->mailboxConfigured() ?? false;
+            $page['mailAccount'] = $settings ? ['email' => $settings->mail_from_address, 'name' => $settings->mail_from_name] : null;
+            $page['mailbox'] = ['folders' => [], 'messages' => ['data' => [], 'total' => 0, 'page' => 1, 'lastPage' => 1], 'selected' => null];
+            if ($page['mailConfigured']) {
+                try {
+                    $mailbox = MailboxService::fromSettings($settings);
+                    $folder = $request->string('folder', 'INBOX')->toString() ?: 'INBOX';
+                    $page['mailbox']['folder'] = $folder;
+                    $page['mailbox']['folders'] = $mailbox->folders();
+                    $page['mailbox']['messages'] = $mailbox->messages($folder, $request->string('q')->toString(), max(1, $request->integer('page', 1)));
+                    if ($uid = $request->integer('uid')) {
+                        $page['mailbox']['selected'] = $mailbox->message($uid, $folder);
+                    }
+                } catch (Throwable $exception) {
+                    report($exception);
+                    $page['mailboxError'] = $exception->getMessage();
+                }
+            }
         } elseif ($screen === 'languages') {
-            $page['title'] = 'Langues & traductions'; $page['languages'] = collect(File::files(base_path('lang')))->filter(fn ($f) => $f->getExtension() === 'json')->map(fn ($f) => $f->getBasename('.json'))->values();
+            $page['title'] = 'Langues & traductions';
+            $page['languages'] = collect(File::files(base_path('lang')))->filter(fn ($f) => $f->getExtension() === 'json')->map(fn ($f) => $f->getBasename('.json'))->values();
             $page['activeLanguage'] = DB::table('settings')->value('default_language');
         } elseif ($screen === 'language') {
             abort_unless(preg_match('/^[a-zA-Z-]+$/', $id) && File::exists(base_path("lang/$id.json")), 404);
-            $page['title'] = 'Traductions · '.$id; $page['language'] = $id; $page['translations'] = json_decode(File::get(base_path("lang/$id.json")), true);
+            $page['title'] = 'Traductions · '.$id;
+            $page['language'] = $id;
+            $page['translations'] = json_decode(File::get(base_path("lang/$id.json")), true);
             foreach (json_decode(File::get(resource_path('js/lims/messages.json')), true) as $french => $key) {
                 $page['translations'][$key] ??= $id === 'fr' ? $french : $key;
             }
         } elseif ($screen === 'update') {
-            $page['title'] = 'Maintenance & mises à jour'; $page['kind'] = 'info';
+            $page['title'] = 'Maintenance & mises à jour';
+            $page['kind'] = 'info';
             $page['message'] = 'Les mises à jour sont déployées par votre administrateur. La version actuelle ne dispose pas de service de mise à jour automatique.';
         } elseif ($screen === 'profile') {
             $page['title'] = 'Mon compte';
         } elseif ($screen === 'newtest') {
             $page['title'] = 'Commençons par le patient.';
         } elseif (str_starts_with($screen, 'auth.')) {
-            $page['title'] = 'Bienvenue dans votre laboratoire'; $page['token'] = $request->route('token'); $page['email'] = $request->query('email');
-        } else abort(404);
+            $page['title'] = 'Bienvenue dans votre laboratoire';
+            $page['token'] = $request->route('token');
+            $page['email'] = $request->query('email');
+        } else {
+            abort(404);
+        }
 
         return $page;
     }

@@ -2,7 +2,15 @@
 
 namespace Tests\Feature;
 
-use App\Models\{User, Patient, Price, Test as Order, Category, Group, Stock, EmailSetting};
+use App\Models\Category;
+use App\Models\ColorSetting;
+use App\Models\EmailSetting;
+use App\Models\Group;
+use App\Models\Patient;
+use App\Models\Price;
+use App\Models\Stock;
+use App\Models\Test as Order;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -16,6 +24,7 @@ class LimsWorkflowTest extends TestCase
         $this->actingAs(User::factory()->create());
         $patient = Patient::create(['firstname' => 'Test', 'lastname' => 'Patient', 'id_card' => 'TEST-1', 'date_of_birth' => '1990-01-01', 'gender' => 'Male', 'phone' => '0600000000']);
         $price = Price::create(['test_name' => 'Glycémie', 'test_description' => 'À jeun', 'test_unit' => 'g/L', 'test_reference_value' => '0.70–1.10', 'price' => 50]);
+
         return [$patient, $price];
     }
 
@@ -28,12 +37,15 @@ class LimsWorkflowTest extends TestCase
         $order = Order::create(['patient_id' => $patient->id, 'total_price' => 50, 'paid_amount' => 0, 'remaining_or_give' => 50, 'payment_method' => 'cash', 'test_status' => '1']);
         $order->prices()->attach($price);
         EmailSetting::first()->update(['mail_password' => 'must-never-reach-react']);
-        $paths = ['/', '/dashboard', '/new-test', '/patients', '/patients/create', "/patients/$patient->id/edit", "/patients/$patient->id", '/prices', '/prices/create', "/prices/$price->id/edit", '/categories', '/categories/create', '/category/create', "/categories/$category->id/edit", '/groups', '/groups/create', '/group/create', "/groups/$group->id/edit", '/stocks', '/product/create', "/product/$stock->id/edit", '/tests', '/tests/create', "/tests/$order->id/edit", "/tests/$order->id", '/results', "/results/$order->id/edit", '/invoices', "/invoice/$order->id", '/all-barcodes', "/test/barcodes/$order->id", "/print/result/$order->id", '/staff', '/email', '/settings', '/setting/laboratory', '/setting/payment', '/setting/email', '/setting/colors', '/setting/license', '/languages', '/languages/en/edit', '/update', '/profile'];
+        $staffMember = User::factory()->create();
+        $paths = ['/', '/dashboard', '/new-test', '/patients', '/patients/create', "/patients/$patient->id/edit", "/patients/$patient->id", '/prices', '/prices/create', "/prices/$price->id/edit", '/categories', '/categories/create', '/category/create', "/categories/$category->id/edit", '/groups', '/groups/create', '/group/create', "/groups/$group->id/edit", '/stocks', '/product/create', "/product/$stock->id/edit", '/tests', '/tests/create', "/tests/$order->id/edit", "/tests/$order->id", '/results', "/results/$order->id/edit", '/invoices', "/invoice/$order->id", '/all-barcodes', "/test/barcodes/$order->id", "/print/result/$order->id", '/staff', '/staff/create', "/staff/$staffMember->id/edit", '/email', '/settings', '/setting/laboratory', '/setting/payment', '/setting/email', '/setting/colors', '/setting/patient-portal', '/setting/license', '/languages', '/languages/en/edit', '/update', '/profile'];
         foreach ($paths as $path) {
             $response = $this->get($path);
             $response->assertOk()->assertViewIs('react')->assertSee('id="lims"', false)->assertDontSee('must-never-reach-react');
             if ($directory = getenv('LIMS_CAPTURE_DIR')) {
-                if (!is_dir($directory)) mkdir($directory, 0700, true);
+                if (! is_dir($directory)) {
+                    mkdir($directory, 0700, true);
+                }
                 file_put_contents($directory.'/'.md5($path).'.json', json_encode($response->viewData('page'), JSON_THROW_ON_ERROR));
             }
         }
@@ -51,7 +63,9 @@ class LimsWorkflowTest extends TestCase
         $this->assertSame('40.00', $order->remaining_or_give);
         $pivot = DB::table('test_for_patients')->first();
         $this->put('/results/'.$pivot->id, ['test_result_value' => '0.95', 'conclusion' => 'Conservée'])->assertSessionHasNoErrors();
-        unset($data['tests']); $data['modifieds'] = [$pivot->id]; $data['paid_amount'] = 20;
+        unset($data['tests']);
+        $data['modifieds'] = [$pivot->id];
+        $data['paid_amount'] = 20;
         $this->put('/tests/'.$order->id.'/edit', $data)->assertSessionHasNoErrors();
         $this->assertDatabaseHas('test_for_patients', ['id' => $pivot->id, 'test_result_value' => '0.95', 'conclusion' => 'Conservée']);
         $this->assertSame('30.00', $order->fresh()->remaining_or_give);
@@ -71,12 +85,16 @@ class LimsWorkflowTest extends TestCase
 
     public function test_guest_cannot_access_laboratory_data(): void
     {
-        foreach (['/patients', '/tests', '/results', '/setting/email'] as $path) $this->get($path)->assertRedirect('/login');
+        foreach (['/patients', '/tests', '/results', '/setting/email'] as $path) {
+            $this->get($path)->assertRedirect('/login');
+        }
         $this->post('/patients/search', ['q' => 'Test'])->assertRedirect('/login');
-        foreach (['/login', '/register', '/forgot-password', '/reset-password/test-token?email=test@example.test'] as $path) {
+        foreach (['/login', '/forgot-password', '/reset-password/test-token?email=test@example.test'] as $path) {
             $response = $this->get($path)->assertOk()->assertViewIs('react');
             if ($directory = getenv('LIMS_CAPTURE_DIR')) {
-                if (!is_dir($directory)) mkdir($directory, 0700, true);
+                if (! is_dir($directory)) {
+                    mkdir($directory, 0700, true);
+                }
                 file_put_contents($directory.'/'.md5($path).'.json', json_encode($response->viewData('page'), JSON_THROW_ON_ERROR));
             }
         }
@@ -143,7 +161,8 @@ class LimsWorkflowTest extends TestCase
         [$patient, $price] = $this->fixtures();
         $this->post('/categories', ['category_name' => 'Biochimie'])->assertSessionHasNoErrors();
         $this->post('/groups', ['group_name' => 'Bilan'])->assertSessionHasNoErrors();
-        $category = Category::first(); $group = Group::first();
+        $category = Category::first();
+        $group = Group::first();
         $this->put('/prices/'.$price->id, ['test_name' => 'Glycémie', 'test_description' => 'À jeun', 'test_unit' => 'g/L', 'test_reference_value' => '0.7–1.1', 'price' => 70, 'groups' => [$group->id], 'categories' => [$category->id]])->assertSessionHasNoErrors();
         $this->post('/tests', ['patient_id' => $patient->id, 'tests' => [$price->id.'*'.$group->id.'*'.$category->id], 'paid_amount' => 0, 'payment_method' => 'cash', 'test_status' => '0'])->assertSessionHasNoErrors();
         $this->assertDatabaseHas('test_for_patients', ['price_id' => $price->id, 'group_id' => $group->id, 'category_id' => $category->id]);
@@ -162,9 +181,17 @@ class LimsWorkflowTest extends TestCase
         $this->post('/setting/payment', ['cash' => 'true', 'pos' => 'false', 'currency' => 'MAD', 'tax' => 20])->assertSessionHasNoErrors();
         $this->assertDatabaseHas('payment_methods', ['cash' => 'true', 'pos' => 'false', 'cheque' => 'false']);
         EmailSetting::first()->update(['mail_password' => 'saved-secret']);
-        $this->post('/setting/email', ['mail_host' => 'smtp.example.test', 'mail_port' => '587', 'mail_username' => 'test', 'mail_password' => '', 'mail_from_address' => 'lab@example.test', 'mail_from_name' => 'Laboratoire', 'send_email' => 'false'])->assertSessionHasNoErrors();
+        $this->post('/setting/email', ['mail_host' => 'smtp.example.test', 'mail_port' => '587', 'mail_username' => 'test', 'mail_password' => '', 'mail_encryption' => 'tls', 'mail_from_address' => 'lab@example.test', 'mail_from_name' => 'Laboratoire', 'imap_host' => 'imap.example.test', 'imap_port' => 993, 'imap_encryption' => 'ssl', 'imap_username' => 'test', 'imap_password' => 'imap-secret', 'imap_validate_cert' => '1', 'send_email' => 'false'])->assertSessionHasNoErrors();
         $this->assertSame('saved-secret', EmailSetting::first()->mail_password);
         $this->assertSame('false', EmailSetting::first()->email_notification);
+        $this->assertSame('imap.example.test', EmailSetting::first()->imap_host);
+        $this->assertTrue(EmailSetting::first()->mailboxConfigured());
+
+        ColorSetting::first()->update(['primary_color' => '#abcdef', 'error_color' => '#123456']);
+        $this->post('/setting/colors/reset')
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/setting/colors');
+        $this->assertSame(ColorSetting::DEFAULTS, ColorSetting::first()->only(array_keys(ColorSetting::DEFAULTS)));
     }
 
     public function test_results_from_another_order_cannot_be_retained_in_an_edit(): void
@@ -172,10 +199,12 @@ class LimsWorkflowTest extends TestCase
         [$patient, $price] = $this->fixtures();
         $data = ['patient_id' => $patient->id, 'tests' => [$price->id.'*null*null'], 'paid_amount' => 0, 'payment_method' => 'cash', 'test_status' => '1'];
         $this->post('/tests', $data)->assertSessionHasNoErrors();
-        $first = Order::first(); $foreignLine = DB::table('test_for_patients')->first();
+        $first = Order::first();
+        $foreignLine = DB::table('test_for_patients')->first();
         $this->post('/tests', $data)->assertSessionHasNoErrors();
         $second = Order::latest('id')->first();
-        unset($data['tests']); $data['modifieds'] = [$foreignLine->id];
+        unset($data['tests']);
+        $data['modifieds'] = [$foreignLine->id];
         $this->put('/tests/'.$second->id, $data)->assertSessionHasErrors('modifieds.0');
         $this->assertDatabaseCount('test_for_patients', 2);
         $this->assertDatabaseHas('test_for_patients', ['id' => $foreignLine->id, 'test_id' => $first->id]);

@@ -126,6 +126,7 @@ export function OrderForm() {
                                     <Search size={18} />
                                     <input
                                         aria-label="Rechercher une analyse"
+                                        type="search"
                                         placeholder="Rechercher une analyse…"
                                         value={search}
                                         onChange={(e) =>

@@ -1,44 +1,42 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\EmailSetting;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class EmailSettingController extends Controller
 {
-    // Store or update the email settings
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        // Validate the incoming data
-        $request->validate([
-            'mail_host' => 'required|string',
-            'mail_port' => 'required|string',
-            'mail_username' => 'required|string',
-            'mail_password' => 'nullable|string',
-            'mail_from_address' => 'required|email',
-            'mail_from_name' => 'required|string',
+        $settings = EmailSetting::firstOrNew([]);
+        $validated = $request->validate([
+            'mail_host' => ['required', 'string', 'max:255'],
+            'mail_port' => ['required', 'integer', 'between:1,65535'],
+            'mail_username' => ['required', 'string', 'max:255'],
+            'mail_password' => [Rule::requiredIf(blank($settings->mail_password) || $settings->mail_password === 'your_password'), 'nullable', 'string', 'max:2048'],
+            'mail_encryption' => ['nullable', 'in:tls,ssl'],
+            'mail_from_address' => ['required', 'email', 'max:255'],
+            'mail_from_name' => ['required', 'string', 'max:255'],
+            'imap_host' => ['required', 'string', 'max:255'],
+            'imap_port' => ['required', 'integer', 'between:1,65535'],
+            'imap_username' => ['required', 'string', 'max:255'],
+            'imap_password' => [Rule::requiredIf(blank($settings->imap_password)), 'nullable', 'string', 'max:2048'],
+            'imap_encryption' => ['required', 'in:tls,ssl,none'],
+            'imap_validate_cert' => ['nullable', 'boolean'],
         ]);
 
-        // Check if settings exist, if not, create them
-        $emailSetting = EmailSetting::firstOrNew([]);
-
-        // Update or create email settings
-        $emailSetting->fill([
-            'mail_driver' => 'smtp', // Default value
-            'mail_host' => $request->mail_host,
-            'mail_port' => $request->mail_port,
-            'mail_username' => $request->mail_username,
-            'mail_password' => $request->filled('mail_password') ? $request->mail_password : $emailSetting->mail_password,
-            'mail_encryption' => $request->mail_encryption ?? null,
-            'mail_from_address' => $request->mail_from_address,
-            'mail_from_name' => $request->mail_from_name,
+        $settings->fill([...$validated, ...[
+            'mail_driver' => 'smtp',
+            'mail_password' => $request->filled('mail_password') ? $request->string('mail_password')->toString() : $settings->mail_password,
+            'imap_password' => $request->filled('imap_password') ? $request->string('imap_password')->toString() : $settings->imap_password,
+            'imap_validate_cert' => $request->boolean('imap_validate_cert'),
             'email_notification' => $request->boolean('send_email') ? 'true' : 'false',
-        ]);
+        ]]);
+        $settings->save();
 
-        // Save the settings
-        $emailSetting->save();
-
-        // Return success message
-        return redirect()->route('settings.email')->with('success', 'Email settings saved successfully');
+        return redirect()->route('settings.email')->with('success', 'Configuration de la messagerie enregistrée.');
     }
 }

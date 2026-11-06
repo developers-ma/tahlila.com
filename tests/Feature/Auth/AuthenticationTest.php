@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Setting;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,6 +17,16 @@ class AuthenticationTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertStatus(200);
+        $response->assertViewHas('page', fn (array $page) => $page['patientPortalEnabled'] === false);
+    }
+
+    public function test_patient_login_choice_is_exposed_only_when_portal_is_enabled(): void
+    {
+        $this->get('/login')->assertViewHas('page', fn (array $page) => $page['patientPortalEnabled'] === false);
+
+        Setting::first()->update(['patient_portal_enabled' => true]);
+
+        $this->get('/login')->assertViewHas('page', fn (array $page) => $page['patientPortalEnabled'] === true);
     }
 
     public function test_users_can_authenticate_using_the_login_screen(): void
@@ -50,6 +61,7 @@ class AuthenticationTest extends TestCase
         $response = $this->actingAs($user)->post('/logout');
 
         $this->assertGuest();
-        $response->assertRedirect('/');
+        $response->assertRedirect('/login');
+        $response->assertSessionHas('success');
     }
 }
