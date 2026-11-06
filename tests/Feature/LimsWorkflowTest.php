@@ -1,0 +1,183 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\{User, Patient, Price, Test as Order, Category, Group, Stock, EmailSetting};
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
+
+class LimsWorkflowTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function fixtures(): array
+    {
+        $this->actingAs(User::factory()->create());
+        $patient = Patient::create(['firstname' => 'Test', 'lastname' => 'Patient', 'id_card' => 'TEST-1', 'date_of_birth' => '1990-01-01', 'gender' => 'Male', 'phone' => '0600000000']);
+        $price = Price::create(['test_name' => 'Glycémie', 'test_description' => 'À jeun', 'test_unit' => 'g/L', 'test_reference_value' => '0.70–1.10', 'price' => 50]);
+        return [$patient, $price];
+    }
+
+    public function test_every_existing_page_renders_react_without_exposing_passwords(): void
+    {
+        [$patient, $price] = $this->fixtures();
+        $category = Category::create(['category_name' => 'Biochimie']);
+        $group = Group::create(['group_name' => 'Bilan']);
+        $stock = Stock::create(['product_name' => 'Tube', 'product_color' => '#00ff00', 'quantity' => 10]);
+        $order = Order::create(['patient_id' => $patient->id, 'total_price' => 50, 'paid_amount' => 0, 'remaining_or_give' => 50, 'payment_method' => 'cash', 'test_status' => '1']);
+        $order->prices()->attach($price);
+        EmailSetting::first()->update(['mail_password' => 'must-never-reach-react']);
+        $paths = ['/', '/dashboard', '/new-test', '/patients', '/patients/create', "/patients/$patient->id/edit", "/patients/$patient->id", '/prices', '/prices/create', "/prices/$price->id/edit", '/categories', '/categories/create', '/category/create', "/categories/$category->id/edit", '/groups', '/groups/create', '/group/create', "/groups/$group->id/edit", '/stocks', '/product/create', "/product/$stock->id/edit", '/tests', '/tests/create', "/tests/$order->id/edit", "/tests/$order->id", '/results', "/results/$order->id/edit", '/invoices', "/invoice/$order->id", '/all-barcodes', "/test/barcodes/$order->id", "/print/result/$order->id", '/staff', '/email', '/settings', '/setting/laboratory', '/setting/payment', '/setting/email', '/setting/colors', '/setting/license', '/languages', '/languages/en/edit', '/update', '/profile'];
+        foreach ($paths as $path) {
+            $response = $this->get($path);
+            $response->assertOk()->assertViewIs('react')->assertSee('id="lims"', false)->assertDontSee('must-never-reach-react');
+            if ($directory = getenv('LIMS_CAPTURE_DIR')) {
+                if (!is_dir($directory)) mkdir($directory, 0700, true);
+                file_put_contents($directory.'/'.md5($path).'.json', json_encode($response->viewData('page'), JSON_THROW_ON_ERROR));
+            }
+        }
+        $this->get('/history/patient/'.$patient->id)->assertOk()->assertViewIs('react');
+        $this->get('/print/result')->assertRedirect('/results');
+    }
+
+    public function test_order_amounts_are_calculated_on_server_and_kept_results_survive_editing(): void
+    {
+        [$patient, $price] = $this->fixtures();
+        $data = ['patient_id' => $patient->id, 'tests' => [$price->id.'*null*null'], 'paid_amount' => 10, 'payment_method' => 'cash', 'test_status' => '1', 'total_price' => 1, 'remaining_or_give' => -999];
+        $this->post('/tests/create', $data)->assertSessionHasNoErrors()->assertRedirect();
+        $order = Order::firstOrFail();
+        $this->assertSame('50.00', $order->total_price);
+        $this->assertSame('40.00', $order->remaining_or_give);
+        $pivot = DB::table('test_for_patients')->first();
+        $this->put('/results/'.$pivot->id, ['test_result_value' => '0.95', 'conclusion' => 'Conservée'])->assertSessionHasNoErrors();
+        unset($data['tests']); $data['modifieds'] = [$pivot->id]; $data['paid_amount'] = 20;
+        $this->put('/tests/'.$order->id.'/edit', $data)->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('test_for_patients', ['id' => $pivot->id, 'test_result_value' => '0.95', 'conclusion' => 'Conservée']);
+        $this->assertSame('30.00', $order->fresh()->remaining_or_give);
+        $this->put('/invoices/'.$order->id, ['remaining_or_give' => 0, 'patient_id' => 999, 'total_price' => 1])->assertSessionHasNoErrors();
+        $this->assertSame('50.00', $order->fresh()->total_price);
+        $this->assertSame('50.00', $order->fresh()->paid_amount);
+        $this->assertEquals($patient->id, $order->fresh()->patient_id);
+    }
+
+    public function test_invalid_selection_cannot_create_partial_order(): void
+    {
+        [$patient, $price] = $this->fixtures();
+        $this->post('/tests/create', ['patient_id' => $patient->id, 'tests' => [$price->id.'*999*null'], 'paid_amount' => 0, 'payment_method' => 'cash', 'test_status' => '1'])->assertSessionHasErrors('tests');
+        $this->assertDatabaseCount('tests', 0);
+        $this->assertDatabaseCount('test_for_patients', 0);
+    }
+
+    public function test_guest_cannot_access_laboratory_data(): void
+    {
+        foreach (['/patients', '/tests', '/results', '/setting/email'] as $path) $this->get($path)->assertRedirect('/login');
+        $this->post('/patients/search', ['q' => 'Test'])->assertRedirect('/login');
+        foreach (['/login', '/register', '/forgot-password', '/reset-password/test-token?email=test@example.test'] as $path) {
+            $response = $this->get($path)->assertOk()->assertViewIs('react');
+            if ($directory = getenv('LIMS_CAPTURE_DIR')) {
+                if (!is_dir($directory)) mkdir($directory, 0700, true);
+                file_put_contents($directory.'/'.md5($path).'.json', json_encode($response->viewData('page'), JSON_THROW_ON_ERROR));
+            }
+        }
+    }
+
+    public function test_react_router_json_api_returns_page_data_and_protects_laboratory_records(): void
+    {
+        $this->getJson('/api/lims/patients')->assertUnauthorized();
+        $this->getJson('/api/lims/login')
+            ->assertOk()
+            ->assertJsonPath('screen', 'auth.login')
+            ->assertJsonMissingPath('laboratory.mail_password');
+
+        [$patient] = $this->fixtures();
+        foreach (range(1, 20) as $number) {
+            Patient::create([
+                'firstname' => 'Patient',
+                'lastname' => 'API '.$number,
+                'id_card' => 'API-'.$number,
+                'date_of_birth' => '1990-01-01',
+                'gender' => '1',
+                'phone' => '060000'.str_pad((string) $number, 4, '0', STR_PAD_LEFT),
+            ]);
+        }
+        $this->getJson('/api/lims/patients?q=Test')
+            ->assertOk()
+            ->assertJsonPath('screen', 'patients')
+            ->assertJsonPath('rows.data.0.id', $patient->id)
+            ->assertJsonPath('path', '/patients');
+        $this->getJson('/api/lims/patients')
+            ->assertOk()
+            ->assertJsonPath('rows.current_page', 1)
+            ->assertJsonPath('rows.next_page_url', '/patients?page=2');
+        $this->getJson('/api/lims/tests/create?patient='.$patient->id)
+            ->assertOk()
+            ->assertJsonPath('screen', 'order')
+            ->assertJsonPath('selectedPatient', (string) $patient->id);
+    }
+
+    public function test_json_form_submission_can_follow_redirect_to_the_next_react_page(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $response = $this
+            ->followingRedirects()
+            ->withHeaders(['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest'])
+            ->post('/patients', [
+                'firstname' => 'API',
+                'lastname' => 'Patient',
+                'gender' => '2',
+                'date_of_birth' => '1995-01-01',
+                'id_card' => 'API-1',
+                'phone' => '0600000000',
+            ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('screen', 'order')
+            ->assertJsonPath('selectedPatient', '1');
+    }
+
+    public function test_catalogue_group_and_category_selections_are_saved_and_used_prices_are_protected(): void
+    {
+        [$patient, $price] = $this->fixtures();
+        $this->post('/categories', ['category_name' => 'Biochimie'])->assertSessionHasNoErrors();
+        $this->post('/groups', ['group_name' => 'Bilan'])->assertSessionHasNoErrors();
+        $category = Category::first(); $group = Group::first();
+        $this->put('/prices/'.$price->id, ['test_name' => 'Glycémie', 'test_description' => 'À jeun', 'test_unit' => 'g/L', 'test_reference_value' => '0.7–1.1', 'price' => 70, 'groups' => [$group->id], 'categories' => [$category->id]])->assertSessionHasNoErrors();
+        $this->post('/tests', ['patient_id' => $patient->id, 'tests' => [$price->id.'*'.$group->id.'*'.$category->id], 'paid_amount' => 0, 'payment_method' => 'cash', 'test_status' => '0'])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('test_for_patients', ['price_id' => $price->id, 'group_id' => $group->id, 'category_id' => $category->id]);
+        $this->delete('/prices/'.$price->id)->assertSessionHas('error');
+        $this->assertNotNull($price->fresh());
+    }
+
+    public function test_patient_stock_payment_and_email_settings_forms_keep_their_backend_contracts(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $this->post('/patients', ['firstname' => 'Lina', 'lastname' => 'Test', 'gender' => '2', 'date_of_birth' => '1995-01-01', 'id_card' => 'TEST-2', 'phone' => '0600000000'])->assertSessionHasNoErrors()->assertRedirect('/tests/create?patient=1');
+        $this->post('/product/create', ['product_name' => 'Tube', 'product_color' => '#ffaabb', 'quantity' => 100])->assertSessionHasNoErrors();
+        $stock = Stock::first();
+        $this->put('/product/'.$stock->id.'/edit', ['product_name' => 'Tube', 'product_color' => '#ffaabb', 'quantity' => 100, 'quantity_used' => 10])->assertSessionHasNoErrors();
+        $this->assertEquals(10, $stock->fresh()->quantity_used);
+        $this->post('/setting/payment', ['cash' => 'true', 'pos' => 'false', 'currency' => 'MAD', 'tax' => 20])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('payment_methods', ['cash' => 'true', 'pos' => 'false', 'cheque' => 'false']);
+        EmailSetting::first()->update(['mail_password' => 'saved-secret']);
+        $this->post('/setting/email', ['mail_host' => 'smtp.example.test', 'mail_port' => '587', 'mail_username' => 'test', 'mail_password' => '', 'mail_from_address' => 'lab@example.test', 'mail_from_name' => 'Laboratoire', 'send_email' => 'false'])->assertSessionHasNoErrors();
+        $this->assertSame('saved-secret', EmailSetting::first()->mail_password);
+        $this->assertSame('false', EmailSetting::first()->email_notification);
+    }
+
+    public function test_results_from_another_order_cannot_be_retained_in_an_edit(): void
+    {
+        [$patient, $price] = $this->fixtures();
+        $data = ['patient_id' => $patient->id, 'tests' => [$price->id.'*null*null'], 'paid_amount' => 0, 'payment_method' => 'cash', 'test_status' => '1'];
+        $this->post('/tests', $data)->assertSessionHasNoErrors();
+        $first = Order::first(); $foreignLine = DB::table('test_for_patients')->first();
+        $this->post('/tests', $data)->assertSessionHasNoErrors();
+        $second = Order::latest('id')->first();
+        unset($data['tests']); $data['modifieds'] = [$foreignLine->id];
+        $this->put('/tests/'.$second->id, $data)->assertSessionHasErrors('modifieds.0');
+        $this->assertDatabaseCount('test_for_patients', 2);
+        $this->assertDatabaseHas('test_for_patients', ['id' => $foreignLine->id, 'test_id' => $first->id]);
+    }
+}
