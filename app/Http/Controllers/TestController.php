@@ -29,6 +29,13 @@ class TestController extends Controller
       $test->update($validated);
 
       if ($request->input('return_to') === 'results') {
+          if ($request->expectsJson()) {
+              return response()->json([
+                  'message' => 'Status updated successfully.',
+                  'record' => $test->fresh(['patient']),
+              ]);
+          }
+
           return redirect('/results')->with('success', 'Status updated successfully.');
       }
 

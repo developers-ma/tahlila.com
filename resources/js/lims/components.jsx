@@ -154,6 +154,14 @@ export function Form({
                 navigate(target.pathname + target.search, {
                     state: { page: data },
                 });
+            } else if (data?.message) {
+                replacePage({
+                    ...p,
+                    record: data.record || p.record,
+                    errors: {},
+                    old: {},
+                    flash: data.message,
+                });
             } else if (response.redirected) {
                 let redirectedPage = null;
                 if (

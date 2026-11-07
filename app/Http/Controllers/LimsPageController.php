@@ -94,7 +94,11 @@ class LimsPageController extends Controller
             'patients' => [Patient::class, 'Patients', 'patients', [
                 $this->field('firstname', 'Prénom', 'text', true), $this->field('lastname', 'Nom', 'text', true),
                 $this->field('gender', 'Sexe', 'select', true, ['1' => 'Homme', '2' => 'Femme', 'Male' => 'Homme (ancien libellé)', 'Female' => 'Femme (ancien libellé)']),
-                $this->field('date_of_birth', 'Date de naissance', 'date', true), $this->field('id_card', 'Identité / CIN', 'text', true),
+                $this->field('date_of_birth', 'Date de naissance', 'date', true),
+                $this->field('has_insurance', 'Assurance maladie', 'checkbox'),
+                $this->field('is_child', 'Enfant / Identité du parent', 'checkbox'),
+                $this->field('id_card', 'Identité / CIN', 'text', true),
+                $this->field('parent_id_card', 'Identité / CIN du parent'),
                 $this->field('phone', 'Téléphone', 'tel', true), $this->field('email', 'E-mail', 'email'),
             ]],
             'categories' => [Category::class, 'Catégories', 'categories', [$this->field('category_name', 'Nom de la catégorie', 'text', true)]],

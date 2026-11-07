@@ -1,4 +1,5 @@
 import { t } from "./i18n";
+import { Fragment, useState } from "react";
 import {
     ArrowRight,
     FilePlus2,
@@ -7,7 +8,7 @@ import {
     Plus,
     ShieldCheck,
 } from "lucide-react";
-import { p, money, date } from "./data";
+import { checked, p, money, date } from "./data";
 import {
     Button,
     Heading,
@@ -122,6 +123,18 @@ export function ResourceList() {
     );
 }
 export function ResourceForm() {
+    const isPatientForm = p.resource === "patients";
+    const [isChild, setIsChild] = useState(
+        isPatientForm && checked(p.record?.is_child),
+    );
+    const patientFields = isPatientForm
+        ? p.fields.filter((field) =>
+              isChild
+                  ? field.name !== "id_card"
+                  : field.name !== "parent_id_card",
+          )
+        : p.fields;
+
     return (
         <>
             <Heading />
@@ -135,13 +148,64 @@ export function ResourceForm() {
                     </div>
                     <Form action={p.action} method={p.method}>
                         <div className="form-grid">
-                            {p.fields.map((field) => (
-                                <Field
-                                    key={field.name}
-                                    field={field}
-                                    record={p.record}
-                                />
-                            ))}
+                            {patientFields.map((field) => {
+                                const resolvedField =
+                                    field.name === "is_child"
+                                        ? {
+                                              ...field,
+                                              onChange: (event) =>
+                                                  setIsChild(
+                                                      event.target.checked,
+                                                  ),
+                                          }
+                                        : field.name === "parent_id_card"
+                                          ? { ...field, required: true }
+                                          : field;
+
+                                if (
+                                    ["has_insurance", "is_child"].includes(
+                                        field.name,
+                                    )
+                                ) {
+                                    return (
+                                        <div
+                                            key={field.name}
+                                            className="patient-toggle-field"
+                                        >
+                                            <Field
+                                                field={resolvedField}
+                                                record={p.record}
+                                            />
+                                        </div>
+                                    );
+                                }
+
+                                if (field.name === "parent_id_card") {
+                                    return (
+                                        <div
+                                            key={field.name}
+                                            className="patient-parent-id-field"
+                                        >
+                                            <Field
+                                                field={resolvedField}
+                                                record={p.record}
+                                            />
+                                            <small className="field-help child-id-help">
+                                                {t("Un identifiant comme child/1/CIN sera généré automatiquement.")}
+                                            </small>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <Fragment key={field.name}>
+                                        <Field
+                                            field={resolvedField}
+                                            record={p.record}
+                                        />
+                                    </Fragment>
+                                );
+                            })}
                         </div>
                         <div className="form-footer">
                             <Button secondary href={`/${p.resource}`}>

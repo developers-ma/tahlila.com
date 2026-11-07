@@ -210,6 +210,42 @@ class LimsWorkflowTest extends TestCase
         $this->assertSame(ColorSetting::DEFAULTS, ColorSetting::first()->only(array_keys(ColorSetting::DEFAULTS)));
     }
 
+    public function test_patient_insurance_and_child_parent_identity_are_saved(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $child = [
+            'firstname' => 'Aya',
+            'lastname' => 'Test',
+            'gender' => '2',
+            'date_of_birth' => '2018-05-10',
+            'phone' => '0600000000',
+            'is_child' => '1',
+            'has_insurance' => '1',
+            'parent_id_card' => 'CD480000',
+        ];
+
+        $this->post('/patients', $child)->assertSessionHasNoErrors();
+        $this->post('/patients', [...$child, 'firstname' => 'Adam'])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('patients', [
+            'firstname' => 'Aya',
+            'id_card' => 'child/1/CD480000',
+            'parent_id_card' => 'CD480000',
+            'child_number' => 1,
+            'is_child' => 1,
+            'has_insurance' => 1,
+        ]);
+        $this->assertDatabaseHas('patients', [
+            'firstname' => 'Adam',
+            'id_card' => 'child/2/CD480000',
+            'child_number' => 2,
+        ]);
+
+        $firstChild = Patient::where('firstname', 'Aya')->firstOrFail();
+        $this->put('/patients/'.$firstChild->id, $child)->assertSessionHasNoErrors();
+        $this->assertSame('child/1/CD480000', $firstChild->fresh()->id_card);
+    }
+
     public function test_results_from_another_order_cannot_be_retained_in_an_edit(): void
     {
         [$patient, $price] = $this->fixtures();
