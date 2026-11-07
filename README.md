@@ -44,7 +44,7 @@ La refonte ne recrée pas les comptes et ne réinitialise aucun mot de passe.
 | Accueil      | Compteurs réels, derniers dossiers, activité par jour/mois/année                                                                 |
 | Patients     | Recherche paginée, création, modification, suppression, historique, nouveau dossier                                              |
 | Analyses     | Sélection individuelle, par groupe ou catégorie ; devis ; paiement ; modification ; conservation des résultats maintenus         |
-| Prélèvements | Statut, date, étiquettes standard et par consommable, codes-barres et QR codes                                                   |
+| Sample Collection | Statut, date, étiquettes standard et par consommable, codes-barres et QR codes                                              |
 | Résultats    | Deux valeurs et unités, références, âge/poids/taille, conclusion, statut, compte rendu imprimable, notification e-mail           |
 | Factures     | Liste, document imprimable/PDF via le navigateur, solde et règlement                                                             |
 | Catalogue    | Analyses, tarifs, groupes, catégories et champs nécessaires aux résultats                                                        |

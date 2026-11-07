@@ -74,8 +74,8 @@ const settingsItems = [
         icon: HeartPulse,
     },
     {
-        title: "Mon compte",
-        short: "Mon compte",
+        title: "Profil & sécurité",
+        short: "Profil & sécurité",
         description: "Profil, mot de passe et sécurité.",
         href: "/profile",
         icon: UserRound,
@@ -135,14 +135,7 @@ function SettingsShell({ children, description }) {
                     </div>
                 </aside>
                 <div className="settings-content">
-                    {description && (
-                        <div className="settings-intro">
-                            <span className="status status-3">
-                                <i /> Configuration sécurisée
-                            </span>
-                            <p>{description}</p>
-                        </div>
-                    )}
+
                     {children}
                 </div>
             </div>
@@ -461,7 +454,7 @@ function ColorField({ field, value, onChange }) {
     const inputId = `setting-${field.name}`;
     const pickerValue = /^#[0-9a-f]{6}/i.test(value || "")
         ? value.slice(0, 7)
-        : "#163300";
+        : "#000000";
     return (
         <div className="field color-setting-field">
             <label htmlFor={inputId}>{field.label}</label>
@@ -499,7 +492,7 @@ function PalettePreview({ colors }) {
         <div
             className="palette-preview"
             style={{
-                "--preview-primary": colors.primary_color || "#163300",
+                "--preview-primary": colors.primary_color || "#000000",
                 "--preview-secondary": colors.secondary_color || "#b8ed83",
                 "--preview-background": colors.background_color || "#f7f8f5",
                 "--preview-font": colors.font_color || "#203023",
@@ -901,6 +894,69 @@ export function Profile() {
                     </Form>
                 </SettingsSection>
                 <SettingsSection
+                    icon={ShieldCheck}
+                    title="Authentification à deux facteurs"
+                    description="Protégez votre compte avec Google Authenticator ou une application TOTP compatible."
+                >
+                    {p.twoFactor?.recoveryCodes?.length > 0 && (
+                        <div className="two-factor-recovery-codes" role="status">
+                            <strong>{t("Codes de récupération")}</strong>
+                            <p>{t("Conservez ces codes dans un endroit sûr. Chaque code ne peut être utilisé qu’une fois.")}</p>
+                            <div>
+                                {p.twoFactor.recoveryCodes.map((code) => <code key={code}>{code}</code>)}
+                            </div>
+                        </div>
+                    )}
+                    {p.twoFactor?.pending ? (
+                        <div className="two-factor-setup">
+                            <div className="two-factor-qr" dangerouslySetInnerHTML={{ __html: p.twoFactor.qrCode }} />
+                            <div>
+                                <span className="status status-2"><i /> {t("Configuration en attente")}</span>
+                                <h3>{t("Scannez le QR code")}</h3>
+                                <p>{t("Ouvrez Google Authenticator, ajoutez un compte puis saisissez le code à 6 chiffres.")}</p>
+                                <code className="two-factor-secret">{p.twoFactor.secret}</code>
+                                <Form action="/profile/two-factor/confirm">
+                                    <Field field={{ name: "code", label: t("Code d’authentification"), required: true, inputMode: "numeric", autoComplete: "one-time-code", placeholder: "123456" }} />
+                                    <Button>{t("Confirmer et activer")}</Button>
+                                </Form>
+                            </div>
+                        </div>
+                    ) : p.twoFactor?.enabled ? (
+                        <div className="two-factor-enabled">
+                            <div className="settings-status-card">
+                                <span className="settings-status-icon"><ShieldCheck /></span>
+                                <div>
+                                    <span className="status status-3"><i /> {t("Activée")}</span>
+                                    <h3>{t("Votre compte est protégé")}</h3>
+                                    <p>{t("Un code temporaire sera demandé après votre mot de passe.")}</p>
+                                </div>
+                            </div>
+                            <div className="two-factor-actions">
+                                <Form action="/profile/two-factor/recovery-codes">
+                                    <Field field={{ name: "password", label: t("Mot de passe actuel"), type: "password", required: true, autoComplete: "current-password" }} />
+                                    <Button secondary>{t("Nouveaux codes de récupération")}</Button>
+                                </Form>
+                                <Form action="/profile/two-factor" method="DELETE" confirm={t("Désactiver l’authentification à deux facteurs ?")}>
+                                    <Field field={{ name: "password", label: t("Confirmer avec le mot de passe"), type: "password", required: true, autoComplete: "current-password" }} />
+                                    <Button className="danger-button">{t("Désactiver la 2FA")}</Button>
+                                </Form>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="two-factor-enable">
+                            <div>
+                                <span className="status status-1"><i /> {t("Non activée")}</span>
+                                <h3>{t("Ajoutez une seconde vérification")}</h3>
+                                <p>{t("Après activation, votre mot de passe seul ne suffira plus pour se connecter.")}</p>
+                            </div>
+                            <Form action="/profile/two-factor/enable">
+                                <Field field={{ name: "password", label: t("Mot de passe actuel"), type: "password", required: true, autoComplete: "current-password" }} />
+                                <Button><ShieldCheck size={16} />{t("Activer la 2FA")}</Button>
+                            </Form>
+                        </div>
+                    )}
+                </SettingsSection>
+                <SettingsSection
                     icon={Trash2}
                     title="Zone sensible"
                     description="La suppression du compte est définitive et irréversible."
@@ -1150,9 +1206,9 @@ export function SettingsInfo() {
         const info = p.updateInfo || {};
         const deploymentDate = info.lastDeployment
             ? new Intl.DateTimeFormat(p.locale || "en", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-              }).format(new Date(info.lastDeployment))
+                dateStyle: "medium",
+                timeStyle: "short",
+            }).format(new Date(info.lastDeployment))
             : t("Non disponible");
 
         return (

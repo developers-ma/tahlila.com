@@ -42,7 +42,7 @@ class LimsWorkflowTest extends TestCase
         LaboratorySetting::firstOrFail()->update(['logo' => 'logos/laboratory.png']);
         EmailSetting::first()->update(['mail_password' => 'must-never-reach-react']);
         $staffMember = User::factory()->create();
-        $paths = ['/', '/dashboard', '/new-test', '/patients', '/patients/create', "/patients/$patient->id/edit", "/patients/$patient->id", '/prices', '/prices/create', "/prices/$price->id/edit", '/categories', '/categories/create', '/category/create', "/categories/$category->id/edit", '/groups', '/groups/create', '/group/create', "/groups/$group->id/edit", '/stocks', '/product/create', "/product/$stock->id/edit", '/tests', '/tests/create', "/tests/$order->id/edit", "/tests/$order->id", '/results', "/results/$order->id/edit", '/invoices', "/invoice/$order->id", '/all-barcodes', "/test/barcodes/$order->id", "/print/result/$order->id", '/chat', '/staff', '/staff/create', "/staff/$staffMember->id/edit", '/email', '/settings', '/setting/laboratory', '/setting/payment', '/setting/email', '/setting/colors', '/setting/patient-portal', '/setting/license', '/languages', '/languages/en/edit', '/update', '/profile'];
+        $paths = ['/', '/dashboard', '/new-test', '/patients', '/patients/create', "/patients/$patient->id/edit", "/patients/$patient->id", '/prices', '/prices/create', "/prices/$price->id/edit", '/categories', '/categories/create', '/category/create', "/categories/$category->id/edit", '/groups', '/groups/create', '/group/create', "/groups/$group->id/edit", '/stocks', '/product/create', "/product/$stock->id/edit", '/tests/create', "/tests/$order->id/edit", "/tests/$order->id", '/results', "/results/$order->id/edit", '/invoices', "/invoice/$order->id", '/sample-collection', "/sample-collection/$order->id", "/print/result/$order->id", '/chat', '/staff', '/staff/create', "/staff/$staffMember->id/edit", '/email', '/settings', '/setting/laboratory', '/setting/payment', '/setting/email', '/setting/colors', '/setting/patient-portal', '/setting/license', '/languages', '/languages/en/edit', '/update', '/profile'];
         foreach ($paths as $path) {
             $response = $this->get($path);
             $response->assertOk()->assertViewIs('react')->assertSee('id="lims"', false)->assertDontSee('must-never-reach-react');
@@ -89,7 +89,7 @@ class LimsWorkflowTest extends TestCase
 
     public function test_guest_cannot_access_laboratory_data(): void
     {
-        foreach (['/patients', '/tests', '/results', '/setting/email'] as $path) {
+        foreach (['/patients', '/sample-collection', '/results', '/setting/email'] as $path) {
             $this->get($path)->assertRedirect('/login');
         }
         $this->post('/patients/search', ['q' => 'Test'])->assertRedirect('/login');
@@ -190,6 +190,10 @@ class LimsWorkflowTest extends TestCase
         $stock = Stock::first();
         $this->put('/product/'.$stock->id.'/edit', ['product_name' => 'Tube', 'product_color' => '#ffaabb', 'quantity' => 100, 'quantity_used' => 10])->assertSessionHasNoErrors();
         $this->assertEquals(10, $stock->fresh()->quantity_used);
+        $this->assertSame('#ffaabb', $stock->fresh()->product_color);
+        $this->put('/product/'.$stock->id.'/edit', ['product_name' => 'Tube', 'product_color' => 'red', 'quantity' => 100, 'quantity_used' => 10])
+            ->assertSessionHasErrors('product_color');
+        $this->assertSame('#ffaabb', $stock->fresh()->product_color);
         $this->post('/setting/payment', ['cash' => 'true', 'pos' => 'false', 'currency' => 'MAD', 'tax' => 20])->assertSessionHasNoErrors();
         $this->assertDatabaseHas('payment_methods', ['cash' => 'true', 'pos' => 'false', 'cheque' => 'false']);
         EmailSetting::first()->update(['mail_password' => 'saved-secret']);
@@ -235,14 +239,34 @@ class LimsWorkflowTest extends TestCase
         ]);
         $order->prices()->attach($price);
 
-        $this->postJson('/test/barcodes/'.$order->id.'/print-settings', [
+        $this->postJson('/sample-collection/'.$order->id.'/print-settings', [
             'tube_copies' => ['standard' => 2, '7' => 3],
             'tube_label_format' => '50x30',
-        ])->assertOk()->assertJsonPath('tube_label_format', '50x30');
+        ])->assertOk()
+            ->assertJsonPath('tube_label_format', '50x30')
+            ->assertJsonPath('prelevement_date', now()->toDateString());
 
         $saved = $order->fresh();
         $this->assertSame(['standard' => 2, '7' => 3], $saved->tube_copies);
         $this->assertSame('50x30', $saved->tube_label_format);
+        $this->assertSame(now()->toDateString(), $saved->prelevement_date?->toDateString());
+
+        $differentDate = now()->addDay()->toDateString();
+        $this->postJson('/sample-collection/'.$order->id.'/print-settings', [
+            'tube_copies' => ['standard' => 1],
+            'tube_label_format' => '50x25',
+            'prelevement_date' => $differentDate,
+        ])->assertUnprocessable()->assertJsonValidationErrors('prelevement_date');
+
+        $this->putJson('/sample-collection/'.$order->id, [
+            'test_status' => '2',
+            'prelevement_date' => $differentDate,
+        ])->assertUnprocessable()->assertJsonValidationErrors('prelevement_date');
+
+        $this->assertSame(
+            now()->toDateString(),
+            $order->fresh()->prelevement_date?->toDateString(),
+        );
     }
 
     public function test_laboratory_logo_upload_is_saved_to_the_public_disk(): void

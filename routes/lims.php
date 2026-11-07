@@ -7,7 +7,6 @@ $protectedPages = [
     '/' => ['dashboard', 'dashboard.root', 'dashboard.view'],
     '/dashboard' => ['dashboard', 'dashboard', 'dashboard.view'],
     '/new-test' => ['newtest', 'newtest', 'orders.manage'],
-    '/tests' => ['tests', 'tests', 'orders.manage'],
     '/tests/create' => ['order', 'tests.create', 'orders.manage'],
     '/tests/{id}/edit' => ['order', 'tests.edit', 'orders.manage'],
     '/tests/{id}' => ['result', 'tests.show', 'results.manage'],
@@ -15,8 +14,8 @@ $protectedPages = [
     '/results/{id}/edit' => ['result', 'results.edit', 'results.manage'],
     '/invoices' => ['invoices', 'invoices', 'invoices.manage'],
     '/invoice/{id}' => ['invoice', 'invoice.generateInvoice', 'invoices.manage'],
-    '/all-barcodes' => ['all-barcodes', 'all-barcodes', 'collection.manage'],
-    '/test/barcodes/{id}' => ['barcode', 'barcodes', 'collection.manage'],
+    '/sample-collection' => ['sample-collection', 'sample-collection', 'collection.manage'],
+    '/sample-collection/{id}' => ['barcode', 'sample-collection.show', 'collection.manage'],
     '/print/result/{id}' => ['report', 'results.report', 'results.manage'],
     '/chat' => ['chat', 'chat', 'chat.use'],
     '/staff' => ['staff', 'staff', 'staff.manage'],
@@ -62,6 +61,7 @@ $guestPages = [
     '/login' => ['auth.login', 'login'],
     '/forgot-password' => ['auth.forgot-password', 'password.request'],
     '/reset-password/{token}' => ['auth.reset-password', 'password.reset'],
+    '/two-factor-challenge' => ['auth.two-factor', 'two-factor.login'],
 ];
 
 // Public staff registration is disabled. Patients initialize their separate

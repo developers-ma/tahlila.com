@@ -44,7 +44,7 @@ export function DocumentLinks() {
                 <a href={`/tests/${p.record.id}`}>{t("R\xE9sultats")}</a>
             )}
             {can("collection.manage") && (
-                <a href={`/test/barcodes/${p.record.id}`}>
+                <a href={`/sample-collection/${p.record.id}`}>
                     {t("Pr\xE9l\xE8vement")}
                 </a>
             )}
@@ -189,7 +189,7 @@ export function Results() {
                         <section className="panel form-panel">
                             <h2>{t("Suivi du dossier")}</h2>
                             <Form
-                                action={`/all-barcodes/${p.record.id}`}
+                                action={`/sample-collection/${p.record.id}/status`}
                                 method="PUT"
                             >
                                 <Field
@@ -245,17 +245,56 @@ export function Invoice() {
             : paid > 0
               ? { label: "Partiellement payée", className: "partial" }
               : { label: "À régler", className: "unpaid" };
+    const printInvoice = (mode) => {
+        const root = document.documentElement;
+        const previousPrintStyle = document.getElementById(
+            "invoice-print-page-size",
+        );
+        previousPrintStyle?.remove();
+
+        const printStyle = document.createElement("style");
+        printStyle.id = "invoice-print-page-size";
+        const thermalPageHeight = Math.max(
+            150,
+            Math.min(1000, 145 + p.lines.length * 10),
+        );
+        printStyle.textContent =
+            mode === "thermal"
+                ? `@page { size: 80mm ${thermalPageHeight}mm; margin: 3mm; }`
+                : "@page { size: A4 portrait; margin: 12mm; }";
+        document.head.appendChild(printStyle);
+        root.dataset.invoicePrint = mode;
+        window.addEventListener(
+            "afterprint",
+            () => {
+                delete root.dataset.invoicePrint;
+                printStyle.remove();
+            },
+            { once: true },
+        );
+        window.print();
+    };
 
     return (
         <>
             <Heading>
-                <Button
-                    className="invoice-print-button"
-                    onClick={() => window.print()}
-                >
-                    <Printer size={18} />
-                    {t("Imprimer / PDF")}
-                </Button>
+                <div className="invoice-print-actions">
+                    <Button
+                        secondary
+                        className="invoice-thermal-print-button"
+                        onClick={() => printInvoice("thermal")}
+                    >
+                        <ReceiptText size={17} />
+                        {t("Impression thermique")}
+                    </Button>
+                    <Button
+                        className="invoice-print-button"
+                        onClick={() => printInvoice("a4")}
+                    >
+                        <Printer size={18} />
+                        {t("Imprimer / PDF")}
+                    </Button>
+                </div>
             </Heading>
             <DocumentLinks />
 
@@ -520,6 +559,54 @@ export function Invoice() {
                             .filter(Boolean)
                             .join(" · ")}
                     </p>
+                </footer>
+            </section>
+
+            <section className="thermal-receipt" aria-label={t("Reçu thermique")}>
+                <header className="thermal-receipt-header">
+                    {p.laboratory?.logo_url && (
+                        <img
+                            src={p.laboratory.logo_url}
+                            alt={p.laboratory.laboratory_name || "Laboratoire"}
+                        />
+                    )}
+                    <strong>{p.laboratory?.laboratory_name || "Laboratoire"}</strong>
+                    {p.laboratory?.address && <span>{p.laboratory.address}</span>}
+                    {p.laboratory?.phone && <span>{p.laboratory.phone}</span>}
+                </header>
+                <div className="thermal-receipt-title">
+                    <strong>{isQuote ? "DEVIS" : "FACTURE"}</strong>
+                    <span>{invoiceNumber}</span>
+                    <small>{date(p.record.created_at)}</small>
+                </div>
+                <dl className="thermal-receipt-meta">
+                    <div><dt>Patient</dt><dd>{name(p.record.patient)}</dd></div>
+                    <div><dt>Dossier</dt><dd>{accessionNumber}</dd></div>
+                    <div><dt>Règlement</dt><dd>{paymentLabel}</dd></div>
+                </dl>
+                <div className="thermal-receipt-lines">
+                    {p.lines.map((line) => (
+                        <div key={line.id}>
+                            <span>{line.test_name || "Analyse archivée"}</span>
+                            <strong>{money(line.price)}</strong>
+                        </div>
+                    ))}
+                </div>
+                <div className="thermal-receipt-totals">
+                    <div><span>Total</span><strong>{money(total)}</strong></div>
+                    <div><span>Versé</span><strong>{money(paid)}</strong></div>
+                    <div className="thermal-receipt-balance">
+                        <span>{remaining < 0 ? "À rendre" : "Reste"}</span>
+                        <strong>{money(Math.abs(remaining))}</strong>
+                    </div>
+                </div>
+                <div
+                    className="thermal-receipt-barcode"
+                    dangerouslySetInnerHTML={{ __html: p.barcode }}
+                />
+                <footer>
+                    <strong>Merci pour votre confiance.</strong>
+                    <span>{invoiceNumber}</span>
                 </footer>
             </section>
 
@@ -790,6 +877,12 @@ export function BarcodePage() {
     const [labelFormat, setLabelFormat] = useState(
         p.record.tube_label_format || "50x25",
     );
+    const [collectionDate, setCollectionDate] = useState(
+        p.record.prelevement_date
+            ? String(p.record.prelevement_date).slice(0, 10)
+            : "",
+    );
+    const collectionDateLocked = Boolean(p.record.prelevement_date);
     const [printSaving, setPrintSaving] = useState(false);
     const [printError, setPrintError] = useState("");
     const [saveState, setSaveState] = useState("idle");
@@ -824,7 +917,7 @@ export function BarcodePage() {
         setPrintError("");
         try {
             const response = await csrfFetch(
-                `/test/barcodes/${p.record.id}/print-settings`,
+                `/sample-collection/${p.record.id}/print-settings`,
                 {
                     method: "POST",
                     credentials: "same-origin",
@@ -839,6 +932,7 @@ export function BarcodePage() {
                             ...tubeCopies,
                         },
                         tube_label_format: labelFormat,
+                        prelevement_date: collectionDate || null,
                     }),
                 },
             );
@@ -848,6 +942,13 @@ export function BarcodePage() {
                     data.message || "Paramètres d’impression non enregistrés.",
                 );
             }
+            const data = await response.json();
+            const printedCollectionDate = data.prelevement_date || collectionDate;
+            p.record.prelevement_date = printedCollectionDate;
+            setCollectionDate(printedCollectionDate);
+            await new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve)),
+            );
             window.print();
         } catch (error) {
             setPrintError(error.message || "Enregistrement impossible.");
@@ -874,6 +975,11 @@ export function BarcodePage() {
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
                 throw new Error(data.message || "Enregistrement impossible.");
+            }
+            if (data.test?.prelevement_date) {
+                const savedDate = String(data.test.prelevement_date).slice(0, 10);
+                p.record.prelevement_date = savedDate;
+                setCollectionDate(savedDate);
             }
             setSaveState("saved");
         } catch (error) {
@@ -938,7 +1044,7 @@ export function BarcodePage() {
                             </header>
                             <div className="collection-card-body">
                                 <Form
-                                    action={"/test/barcodes/" + p.record.id}
+                                    action={"/sample-collection/" + p.record.id}
                                     method="PUT"
                                     formRef={formRef}
                                     onSubmit={saveCollection}
@@ -958,13 +1064,25 @@ export function BarcodePage() {
                                             record={p.record}
                                         />
                                         <Field
+                                            key={collectionDate || "empty-collection-date"}
                                             field={{
                                                 name: "prelevement_date",
                                                 label: t("Date du prélèvement"),
                                                 type: "date",
-                                                help: "Date utilisée dans la traçabilité et sur les étiquettes.",
+                                                disabled: collectionDateLocked,
+                                                readOnly: collectionDateLocked,
+                                                onChange: (event) =>
+                                                    setCollectionDate(
+                                                        event.currentTarget.value,
+                                                    ),
+                                                help: collectionDateLocked
+                                                    ? "Date enregistrée et verrouillée pour garantir la traçabilité."
+                                                    : "Date utilisée dans la traçabilité et sur les étiquettes.",
                                             }}
-                                            record={p.record}
+                                            record={{
+                                                ...p.record,
+                                                prelevement_date: collectionDate,
+                                            }}
                                         />
                                     </div>
                                     <div className="collection-form-footer">
@@ -1159,7 +1277,7 @@ export function BarcodePage() {
                                     {patientDetails || "Identité à vérifier"}
                                 </span>
                                 <span>
-                                    Prél. {date(p.record.prelevement_date)}
+                                    Prél. {date(collectionDate)}
                                 </span>
                             </div>
                             <div

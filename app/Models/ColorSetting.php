@@ -10,7 +10,7 @@ class ColorSetting extends Model
     use HasFactory;
 
     public const DEFAULTS = [
-        'primary_color' => '#163300',
+        'primary_color' => '#000000',
         'secondary_color' => '#b8ed83',
         'tertiary_color' => '#e8f4da',
         'neutral_color' => '#7c8a71',

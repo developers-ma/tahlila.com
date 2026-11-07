@@ -15,7 +15,7 @@ class StockController extends Controller
 
         $validated = $request->validate([
             'product_name' => 'required',
-            'product_color' => '',
+            'product_color' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'quantity' => 'required',
         ]);
         Stock::create($validated);
@@ -27,7 +27,7 @@ class StockController extends Controller
     function update(Request $request, Stock $product){
         $validated = $request->validate([
             'product_name' => 'required',
-            'product_color' => '',
+            'product_color' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'quantity' => '',
             'quantity_used' => '',
         ]);

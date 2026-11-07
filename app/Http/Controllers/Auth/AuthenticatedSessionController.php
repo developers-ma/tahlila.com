@@ -20,6 +20,17 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $user = $request->user();
+        if ($user->two_factor_confirmed_at && $user->two_factor_secret) {
+            $request->session()->put([
+                'login.two_factor_user_id' => $user->id,
+                'login.remember' => $request->boolean('remember'),
+            ]);
+            Auth::guard('web')->logout();
+
+            return redirect('/two-factor-challenge');
+        }
+
         return redirect()->intended(RouteServiceProvider::HOME);
     }
 

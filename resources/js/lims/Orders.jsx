@@ -401,7 +401,11 @@ export function OrderForm() {
                                 required: true,
                                 options,
                             }}
-                            record={p.record || {}}
+                            record={{
+                                ...(p.record || {}),
+                                payment_method:
+                                    p.record?.payment_method || "cash",
+                            }}
                         />
                         <label className="field">
                             {t("Montant vers\xE9")}
@@ -447,7 +451,7 @@ export function OrderForm() {
                             {t("Enregistrer le dossier")}
                             <ArrowRight size={17} />
                         </Button>
-                        <a className="cancel-link" href="/tests">
+                        <a className="cancel-link" href="/sample-collection">
                             {t("Annuler")}
                         </a>
                     </section>

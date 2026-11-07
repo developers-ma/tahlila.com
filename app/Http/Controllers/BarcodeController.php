@@ -20,6 +20,7 @@ use App\Models\Stock;
 
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 
 class BarcodeController extends Controller
@@ -30,6 +31,17 @@ class BarcodeController extends Controller
             'test_status' => 'required|in:0,1,2,3',
             'prelevement_date' => 'nullable|date',
       ]);
+
+      $storedCollectionDate = $test->prelevement_date?->toDateString();
+      if ($storedCollectionDate && array_key_exists('prelevement_date', $validated)) {
+          if (($validated['prelevement_date'] ?? '') !== $storedCollectionDate) {
+              throw ValidationException::withMessages([
+                  'prelevement_date' => 'La date du prélèvement est définitive après son enregistrement.',
+              ]);
+          }
+
+          unset($validated['prelevement_date']);
+      }
   
       $test->update($validated);
 
@@ -40,7 +52,7 @@ class BarcodeController extends Controller
           ]);
       }
 
-      return redirect()->route('tests')->with('success', 'Test updated successfully.');
+      return redirect()->route('sample-collection')->with('success', 'Test updated successfully.');
 
     }
 
@@ -50,14 +62,35 @@ class BarcodeController extends Controller
             'tube_copies' => ['required', 'array'],
             'tube_copies.*' => ['integer', 'min:0', 'max:100'],
             'tube_label_format' => ['required', 'in:50x25,50x30'],
+            'prelevement_date' => ['nullable', 'date'],
         ]);
+
+        $storedCollectionDate = $test->prelevement_date?->toDateString();
+        if ($storedCollectionDate) {
+            if (
+                array_key_exists('prelevement_date', $validated)
+                && ($validated['prelevement_date'] ?? '') !== $storedCollectionDate
+            ) {
+                throw ValidationException::withMessages([
+                    'prelevement_date' => 'La date du prélèvement est définitive après son enregistrement.',
+                ]);
+            }
+
+            $validated['prelevement_date'] = $storedCollectionDate;
+        } else {
+            $validated['prelevement_date'] = $validated['prelevement_date']
+                ?? now()->toDateString();
+        }
 
         $test->update($validated);
 
+        $test->refresh();
+
         return response()->json([
             'message' => 'Paramètres d’impression enregistrés.',
-            'tube_copies' => $test->fresh()->tube_copies,
-            'tube_label_format' => $test->fresh()->tube_label_format,
+            'tube_copies' => $test->tube_copies,
+            'tube_label_format' => $test->tube_label_format,
+            'prelevement_date' => $test->prelevement_date?->toDateString(),
         ]);
     }
   

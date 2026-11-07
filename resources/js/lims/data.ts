@@ -5,7 +5,6 @@ import {
     ClipboardList,
     FileText,
     SlidersHorizontal,
-    Barcode,
     Package,
     MessageCircle,
     Mail,
@@ -160,15 +159,9 @@ export const navigationSections: {
                 permission: "patients.manage",
             },
             {
-                label: "Dossiers d’analyses",
-                href: "/tests",
+                label: "Sample",
+                href: "/sample-collection",
                 icon: FlaskConical,
-                permission: "orders.manage",
-            },
-            {
-                label: "Prélèvements",
-                href: "/all-barcodes",
-                icon: Barcode,
                 permission: "collection.manage",
             },
             {

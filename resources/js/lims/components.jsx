@@ -2,11 +2,15 @@ import { t } from "./i18n";
 import { useEffect, useId, useRef, useState } from "react";
 import {
     AlertTriangle,
+    ChevronDown,
     Eye,
     EyeOff,
     FlaskConical,
+    RotateCcw,
     Search,
+    SlidersHorizontal,
     Trash2,
+    X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -271,6 +275,8 @@ export function Field({ field, record = {}, useOld = true }) {
         inputMode,
         min,
         max,
+        disabled,
+        readOnly,
         onChange,
     } = field;
     const value =
@@ -286,6 +292,8 @@ export function Field({ field, record = {}, useOld = true }) {
         inputMode,
         min,
         max,
+        disabled,
+        readOnly,
         onChange,
         "aria-invalid": !!p.errors[name],
         "aria-describedby":
@@ -346,6 +354,8 @@ export function Field({ field, record = {}, useOld = true }) {
                 </label>
             ) : type === "file" ? (
                 <FileField common={common} record={record} />
+            ) : type === "color" ? (
+                <ColorField common={common} value={value} />
             ) : type === "password" ? (
                 <div className="password-input">
                     <input
@@ -377,21 +387,14 @@ export function Field({ field, record = {}, useOld = true }) {
             ) : (
                 <input
                     {...common}
-                    type={type === "color" ? "text" : type}
-                    pattern={
-                        type === "color"
-                            ? "#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?"
-                            : undefined
-                    }
+                    type={type}
                     step={type === "number" ? "any" : undefined}
                     defaultValue={
                         type === "password"
                             ? ""
                             : type === "date"
                               ? String(value).slice(0, 10)
-                              : type === "color"
-                                ? value || "#163300"
-                                : value
+                              : value
                     }
                 />
             )}
@@ -405,6 +408,95 @@ export function Field({ field, record = {}, useOld = true }) {
                     {p.errors[name].join(" ")}
                 </small>
             )}
+        </div>
+    );
+}
+
+const tubeColorPresets = [
+    ["Rouge", "#e53935"],
+    ["Or", "#f4b400"],
+    ["Bleu", "#42a5f5"],
+    ["Vert", "#43a047"],
+    ["Violet", "#8e5cc7"],
+    ["Gris", "#90a4ae"],
+    ["Noir", "#263238"],
+    ["Blanc", "#f5f5f5"],
+];
+
+function ColorField({ common, value }) {
+    const initialColor = /^#[0-9a-f]{6}$/i.test(String(value || ""))
+        ? String(value).toLowerCase()
+        : "#43a047";
+    const [color, setColor] = useState(initialColor);
+    const [hexValue, setHexValue] = useState(initialColor);
+    const { name, id, onChange, ...inputProps } = common;
+    const updateColor = (next, event) => {
+        const normalized = next.toLowerCase();
+        setColor(normalized);
+        setHexValue(normalized);
+        onChange?.(event);
+    };
+
+    return (
+        <div className="tube-color-field">
+            <div className="tube-color-control">
+                <label
+                    className="tube-color-picker"
+                    style={{ "--selected-tube-color": color }}
+                    title={t("Choisir une couleur")}
+                >
+                    <input
+                        {...inputProps}
+                        type="color"
+                        value={hexValue}
+                        aria-label={t("Choisir une couleur")}
+                        onChange={(event) =>
+                            updateColor(event.currentTarget.value, event)
+                        }
+                    />
+                </label>
+                <div className="tube-color-value">
+                    <span>{t("Couleur du tube")}</span>
+                    <input
+                        {...inputProps}
+                        id={id}
+                        name={name}
+                        value={color}
+                        pattern="#[0-9a-fA-F]{6}"
+                        maxLength={7}
+                        spellCheck="false"
+                        onChange={(event) => {
+                            const next = event.currentTarget.value;
+                            setHexValue(next);
+                            if (/^#[0-9a-f]{6}$/i.test(next)) {
+                                updateColor(next, event);
+                            }
+                        }}
+                        onBlur={() => {
+                            if (!/^#[0-9a-f]{6}$/i.test(hexValue)) {
+                                setHexValue(color);
+                            }
+                        }}
+                    />
+                </div>
+            </div>
+            <div className="tube-color-presets" aria-label={t("Couleurs de tubes courantes")}>
+                {tubeColorPresets.map(([label, preset]) => (
+                    <button
+                        type="button"
+                        key={preset}
+                        className={color === preset ? "selected" : ""}
+                        style={{ "--tube-preset": preset }}
+                        aria-label={t(label)}
+                        title={t(label)}
+                        aria-pressed={color === preset}
+                        onClick={(event) => updateColor(preset, event)}
+                    />
+                ))}
+            </div>
+            <small className="field-help">
+                {t("Cette couleur sera utilisée pour les tubes et les étiquettes.")}
+            </small>
         </div>
     );
 }
@@ -566,31 +658,50 @@ export function Filters({ status = false }) {
                     aria-label={t("Rechercher")}
                     name="q"
                     type="search"
-                    placeholder="Rechercher un nom, une référence…"
+                    placeholder={t("Rechercher un nom, une référence…")}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                 />
+                {query && (
+                    <button
+                        className="filter-clear"
+                        type="button"
+                        aria-label={t("Effacer la recherche")}
+                        title={t("Effacer la recherche")}
+                        onClick={() => setQuery("")}
+                    >
+                        <X size={15} />
+                    </button>
+                )}
             </div>
             {status && (
-                <select
-                    aria-label={t("Statut")}
-                    name="status"
-                    value={statusValue}
-                    onChange={(event) => setStatusValue(event.target.value)}
-                >
-                    <option value="">{t("Tous les statuts")}</option>
-                    {Object.entries(statuses).map(([key, value]) => (
-                        <option value={key} key={key}>
-                            {value}
-                        </option>
-                    ))}
-                </select>
+                <div className="filter-select">
+                    <SlidersHorizontal size={16} />
+                    <select
+                        aria-label={t("Statut")}
+                        name="status"
+                        value={statusValue}
+                        onChange={(event) => setStatusValue(event.target.value)}
+                    >
+                        <option value="">{t("Tous les statuts")}</option>
+                        {Object.entries(statuses).map(([key, value]) => (
+                            <option value={key} key={key}>
+                                {t(value)}
+                            </option>
+                        ))}
+                    </select>
+                    <ChevronDown className="filter-select-chevron" size={15} />
+                </div>
             )}
-            <Button secondary type="submit">
+            <Button className="filter-submit" type="submit">
+                <Search size={15} />
                 {t("Rechercher")}
             </Button>
             {window.location.search && (
-                <a href={window.location.pathname}>{t("R\xE9initialiser")}</a>
+                <a className="filter-reset" href={window.location.pathname}>
+                    <RotateCcw size={14} />
+                    {t("R\xE9initialiser")}
+                </a>
             )}
         </form>
     );

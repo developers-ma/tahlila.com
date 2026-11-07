@@ -28,7 +28,7 @@ export function Dashboard() {
                 <section className="panel dashboard-recent">
                     <div className="dashboard-card-heading">
                         <h2>{t("Derniers dossiers")}</h2>
-                        {can("orders.manage") && <a href="/tests">{t("Voir tout")} <ArrowRight size={16} /></a>}
+                        {can("collection.manage") && <a href="/sample-collection">{t("Voir tout")} <ArrowRight size={16} /></a>}
                     </div>
                     <OrderTable mode="dashboard" />
                 </section>

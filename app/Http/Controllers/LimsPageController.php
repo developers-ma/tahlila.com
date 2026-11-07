@@ -152,8 +152,8 @@ class LimsPageController extends Controller
             $page['title'] = $patient->firstname.' '.$patient->lastname.' · Historique';
             $page['patientId'] = $patient->id;
             $page['rows'] = Test::with('patient')->where('patient_id', $patient->id)->latest('id')->paginate(20)->withQueryString();
-        } elseif (in_array($screen, ['dashboard', 'tests', 'results', 'invoices', 'all-barcodes'])) {
-            $page['title'] = ['dashboard' => 'Une journée bien organisée.', 'tests' => 'Dossiers d’analyses', 'results' => 'Résultats', 'invoices' => 'Factures & règlements', 'all-barcodes' => 'Prélèvements & codes-barres'][$screen];
+        } elseif (in_array($screen, ['dashboard', 'results', 'invoices', 'sample-collection'])) {
+            $page['title'] = ['dashboard' => 'Une journée bien organisée.', 'results' => 'Résultats', 'invoices' => 'Factures & règlements', 'sample-collection' => 'Prélèvements & codes-barres'][$screen];
             $query = Test::with('patient');
             if ($request->filled('q')) {
                 $q = $request->string('q')->toString();
@@ -348,7 +348,17 @@ class LimsPageController extends Controller
                     : null,
             ];
         } elseif ($screen === 'profile') {
-            $page['title'] = 'Mon compte';
+            $page['title'] = 'Profil & sécurité';
+            $page['twoFactor'] = [
+                'enabled' => (bool) $currentUser?->two_factor_confirmed_at,
+                'pending' => (bool) ($currentUser?->two_factor_secret && ! $currentUser?->two_factor_confirmed_at),
+                'recoveryCodes' => session('two_factor_recovery_codes', []),
+            ];
+            if ($page['twoFactor']['pending']) {
+                $uri = app(\App\Services\TotpService::class)->provisioningUri($currentUser->two_factor_secret, $currentUser->email);
+                $page['twoFactor']['secret'] = $currentUser->two_factor_secret;
+                $page['twoFactor']['qrCode'] = (string) QrCode::format('svg')->size(220)->margin(1)->generate($uri);
+            }
         } elseif ($screen === 'newtest') {
             $page['title'] = 'Commençons par le patient.';
         } elseif (str_starts_with($screen, 'auth.')) {

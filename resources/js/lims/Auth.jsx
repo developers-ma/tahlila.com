@@ -18,13 +18,16 @@ export function Auth() {
         "reset-password": t("Un nouveau d\xE9part."),
         "confirm-password": t("Confirmez votre identit\xE9."),
         "verify-email": t("V\xE9rifiez votre adresse e-mail."),
+        "two-factor": t("Confirmez votre connexion."),
     };
     const action =
         mode === "reset-password"
             ? "/reset-password"
             : mode === "verify-email"
                 ? "/email/verification-notification"
-                : `/${mode}`;
+                : mode === "two-factor"
+                    ? "/two-factor-challenge"
+                    : `/${mode}`;
     return (
         <div className="auth">
             <AuthVisual />
@@ -87,9 +90,7 @@ export function Auth() {
                             <input type="hidden" name="token" value={p.token} />
                         )}
                         <div className="form-grid">
-                            {!["verify-email", "confirm-password"].includes(
-                                mode,
-                            ) && (
+                            {["login", "forgot-password", "reset-password"].includes(mode) && (
                                     <Field
                                         field={{
                                             name: "email",
@@ -104,9 +105,7 @@ export function Auth() {
                                         }}
                                     />
                                 )}
-                            {!["forgot-password", "verify-email"].includes(
-                                mode,
-                            ) && (
+                            {["login", "reset-password", "confirm-password"].includes(mode) && (
                                     <Field
                                         field={{
                                             name: "password",
@@ -133,6 +132,18 @@ export function Auth() {
                                     }}
                                 />
                             )}
+                            {mode === "two-factor" && (
+                                <Field
+                                    field={{
+                                        name: "code",
+                                        label: t("Code d’authentification"),
+                                        required: true,
+                                        placeholder: "123456",
+                                        autoComplete: "one-time-code",
+                                        inputMode: "numeric",
+                                    }}
+                                />
+                            )}
                         </div>
                         {mode === "login" && (
                             <div className="auth-options">
@@ -153,6 +164,8 @@ export function Auth() {
                                 ? t("Se connecter")
                                 : mode === "verify-email"
                                     ? "Renvoyer le lien"
+                                    : mode === "two-factor"
+                                      ? t("Vérifier")
                                     : t("Continuer")}
                             <ArrowRight size={18} />
                         </Button>

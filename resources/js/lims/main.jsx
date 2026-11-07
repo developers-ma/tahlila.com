@@ -59,10 +59,9 @@ function Content() {
     switch (p.screen) {
         case "dashboard":
             return <Dashboard />;
-        case "tests":
         case "results":
         case "invoices":
-        case "all-barcodes":
+        case "sample-collection":
         case "patient-history":
             return <ListPage />;
         case "order":

@@ -14,11 +14,11 @@ export function OrderTable({ rows = p.rows, mode = p.screen }) {
     const recordHref = (row) => {
         if (mode === "invoices" && can("invoices.manage"))
             return `/invoice/${row.id}`;
-        if (mode === "all-barcodes" && can("collection.manage"))
-            return `/test/barcodes/${row.id}`;
+        if (mode === "sample-collection" && can("collection.manage"))
+            return `/sample-collection/${row.id}`;
         if (can("results.manage")) return `/tests/${row.id}`;
         if (can("orders.manage")) return `/tests/${row.id}/edit`;
-        if (can("collection.manage")) return `/test/barcodes/${row.id}`;
+        if (can("collection.manage")) return `/sample-collection/${row.id}`;
         if (can("invoices.manage")) return `/invoice/${row.id}`;
         return undefined;
     };
@@ -84,14 +84,14 @@ export function OrderTable({ rows = p.rows, mode = p.screen }) {
                                             >
                                                 {mode === "invoices" ? (
                                                     <ReceiptText size={15} />
-                                                ) : mode === "all-barcodes" ? (
+                                                ) : mode === "sample-collection" ? (
                                                     <Barcode size={15} />
                                                 ) : (
                                                     <ArrowUpRight size={15} />
                                                 )}
                                                 {mode === "invoices"
                                                     ? t("Facture")
-                                                    : mode === "all-barcodes"
+                                                    : mode === "sample-collection"
                                                       ? t("Pr\xE9lever")
                                                       : t("Ouvrir")}
                                             </a>
@@ -108,7 +108,11 @@ export function OrderTable({ rows = p.rows, mode = p.screen }) {
                                         {mode !== "dashboard" &&
                                             can("orders.manage") && (
                                                 <Delete
-                                                    action={`/tests/${row.id}`}
+                                                    action={
+                                                        mode === "sample-collection"
+                                                            ? `/sample-collection/${row.id}`
+                                                            : `/tests/${row.id}`
+                                                    }
                                                     label="Supprimer ce dossier et tous ses résultats ?"
                                                 />
                                             )}

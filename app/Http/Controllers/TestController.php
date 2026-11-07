@@ -27,7 +27,7 @@ class TestController extends Controller
       ]);
   
       $test->update($validated);
-      return redirect()->route('all-barcodes')->with('success', 'Status updated successfully.');
+      return redirect()->route('sample-collection')->with('success', 'Status updated successfully.');
 
     }
 
@@ -40,19 +40,19 @@ class TestController extends Controller
     public function update(Request $request, Test $test)
     {
         app(\App\Services\SaveLaboratoryOrder::class)->save($request, $test);
-        return redirect()->route('tests')->with('success', 'Dossier mis à jour.');
+        return redirect()->route('sample-collection')->with('success', 'Dossier mis à jour.');
     }
 
     public function destroy(Test $test)
 {
     $test->delete();
-    return redirect()->route('tests')->with('success', 'Test deleted successfully.');
+    return redirect()->route('sample-collection')->with('success', 'Test deleted successfully.');
 }
 
 public function destroytest(Test $test)
 {
     $test->delete();
-    return redirect()->route('all-barcodes')->with('success', 'Test deleted successfully.');
+    return redirect()->route('sample-collection')->with('success', 'Test deleted successfully.');
 }
     
 

@@ -61,11 +61,16 @@ export function ResourceList() {
                                             key={f.name}
                                             className={i === 0 ? "strong" : ""}
                                         >
-                                            {f.type === "date"
+                                            {f.name === "product_color" && row[f.name] ? (
+                                                <span className="stock-color-value">
+                                                    <i style={{ backgroundColor: row[f.name] }} />
+                                                    {row[f.name]}
+                                                </span>
+                                            ) : f.type === "date"
                                                 ? date(row[f.name])
                                                 : f.name === "price"
-                                                  ? money(row[f.name])
-                                                  : row[f.name] || "—"}
+                                                    ? money(row[f.name])
+                                                    : row[f.name] || "—"}
                                         </td>
                                     ))}
                                     <td className="right">
@@ -149,21 +154,7 @@ export function ResourceForm() {
                         </div>
                     </Form>
                 </section>
-                <aside className="help-card">
-                    <ShieldCheck size={28} />
-                    <h3>Une information fiable commence ici.</h3>
-                    <p>
-                        Vérifiez les informations avant de les enregistrer.
-                        Elles seront utilisées dans les dossiers et documents du
-                        laboratoire.
-                    </p>
-                    {p.screen === "patients.create" && (
-                        <p>
-                            Après enregistrement, vous pourrez sélectionner les
-                            analyses du patient.
-                        </p>
-                    )}
-                </aside>
+
             </div>
         </>
     );

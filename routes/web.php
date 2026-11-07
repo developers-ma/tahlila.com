@@ -19,6 +19,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TestController;
+use App\Http\Controllers\TwoFactorAuthenticationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -52,8 +53,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/product/{product}/edit', [StockController::class, 'update'])->middleware('permission:inventory.manage')->name('products.update');
     Route::delete('/product/{product}', [StockController::class, 'destroy'])->middleware('permission:inventory.manage')->name('products.destroy');
 
-    Route::put('/all-barcodes/{test}', [TestController::class, 'changestatus'])->middleware('permission:collection.manage')->name('allbarcodes.changestatus');
-    Route::delete('/all-barcodes/{test}', [TestController::class, 'destroytest'])->middleware('permission:orders.manage')->name('allbarcodes.destroytest');
+    Route::put('/sample-collection/{test}/status', [TestController::class, 'changestatus'])->middleware('permission:collection.manage')->name('sample-collection.status');
+    Route::delete('/sample-collection/{test}', [TestController::class, 'destroytest'])->middleware('permission:orders.manage')->name('sample-collection.destroy');
 
     Route::post('/email', [EmailController::class, 'sendEmail'])->middleware('permission:email.send')->name('send.email.legacy');
     Route::post('/email/send', [EmailController::class, 'sendEmail'])->middleware('permission:email.send')->name('send.email');
@@ -84,8 +85,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/tests/{test}', [TestController::class, 'destroy'])->middleware('permission:orders.manage')->name('tests.destroy');
     Route::post('/tests/create', [TestController::class, 'store'])->middleware('permission:orders.manage')->name('tests.store.create');
     Route::put('/tests/{test}/edit', [TestController::class, 'update'])->middleware('permission:orders.manage')->name('tests.update.edit');
-    Route::put('/test/barcodes/{test}', [BarcodeController::class, 'update'])->middleware('permission:collection.manage')->name('barcodes.update');
-    Route::post('/test/barcodes/{test}/print-settings', [BarcodeController::class, 'savePrintSettings'])->middleware('permission:collection.manage')->name('barcodes.print-settings');
+    Route::put('/sample-collection/{test}', [BarcodeController::class, 'update'])->middleware('permission:collection.manage')->name('sample-collection.update');
+    Route::post('/sample-collection/{test}/print-settings', [BarcodeController::class, 'savePrintSettings'])->middleware('permission:collection.manage')->name('sample-collection.print-settings');
 
     Route::post('/staff', [StaffController::class, 'store'])->middleware('permission:staff.manage')->name('staff.store');
     Route::put('/staff/{user}', [StaffController::class, 'update'])->middleware('permission:staff.manage')->name('staff.update');
@@ -95,6 +96,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/profile/two-factor/enable', [TwoFactorAuthenticationController::class, 'enable'])->name('two-factor.enable');
+    Route::post('/profile/two-factor/confirm', [TwoFactorAuthenticationController::class, 'confirm'])->name('two-factor.confirm');
+    Route::delete('/profile/two-factor', [TwoFactorAuthenticationController::class, 'disable'])->name('two-factor.disable');
+    Route::post('/profile/two-factor/recovery-codes', [TwoFactorAuthenticationController::class, 'regenerate'])->name('two-factor.recovery-codes');
 });
 
 require __DIR__.'/auth.php';

@@ -382,6 +382,14 @@ for (const page of pages) {
             invoice.classList.contains("print-document"),
             "invoice page: missing A4 print document contract",
         );
+        assert.ok(
+            dom.window.document.querySelector(".invoice-thermal-print-button"),
+            "invoice page: missing thermal print action",
+        );
+        assert.ok(
+            dom.window.document.querySelector(".thermal-receipt"),
+            "invoice page: missing thermal receipt contract",
+        );
         assert.equal(
             new URL(
                 invoice.querySelector(".laboratory-logo")?.getAttribute("src"),
