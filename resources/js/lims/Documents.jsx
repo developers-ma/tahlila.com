@@ -1,12 +1,14 @@
 import { t } from "./i18n";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+    AlertTriangle,
     Banknote,
     Building2,
     CalendarDays,
     CheckCircle2,
     ClipboardList,
     CreditCard,
+    Download,
     FileText,
     Mail,
     MapPin,
@@ -15,6 +17,8 @@ import {
     Plus,
     Printer,
     ReceiptText,
+    Send,
+    X,
     TestTube2,
 } from "lucide-react";
 import { csrfFetch, p, statuses, money, date, name, checked, can } from "./data";
@@ -59,11 +63,124 @@ export function DocumentLinks() {
         </div>
     );
 }
+
+function AutoSaveResultForm({ action, children, onValuesChange }) {
+    const formRef = useRef(null);
+    const timerRef = useRef(null);
+    const requestRef = useRef(0);
+    const [status, setStatus] = useState("");
+
+    useEffect(
+        () => () => {
+            window.clearTimeout(timerRef.current);
+        },
+        [],
+    );
+
+    const save = async () => {
+        if (!formRef.current) return;
+
+        const requestId = ++requestRef.current;
+        setStatus("saving");
+        try {
+            const response = await csrfFetch(action, {
+                method: "POST",
+                body: new FormData(formRef.current),
+                headers: {
+                    Accept: "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            });
+            if (!response.ok) throw new Error("Auto-save failed");
+            if (requestId === requestRef.current) setStatus("saved");
+        } catch {
+            if (requestId === requestRef.current) setStatus("error");
+        }
+    };
+
+    const scheduleSave = (event) => {
+        if (!event.target.matches("input, textarea, select")) return;
+        onValuesChange?.();
+        window.clearTimeout(timerRef.current);
+        setStatus("waiting");
+        timerRef.current = window.setTimeout(save, 700);
+    };
+
+    return (
+        <Form
+            action={action}
+            method="PUT"
+            formRef={formRef}
+            data-result-form="true"
+            onInput={scheduleSave}
+            onSubmitCapture={() => window.clearTimeout(timerRef.current)}
+        >
+            {children}
+            <span
+                className={`result-autosave-status ${status}`}
+                role="status"
+                aria-live="polite"
+            >
+                {status === "waiting" || status === "saving"
+                    ? t("Enregistrement automatique…")
+                    : status === "saved"
+                      ? t("Enregistré automatiquement")
+                      : status === "error"
+                        ? t("Échec de l’enregistrement automatique. Utilisez le bouton Enregistrer.")
+                        : ""}
+            </span>
+        </Form>
+    );
+}
+
 export function Results() {
+    const isReady = String(p.record.test_status) === "3";
+    const initialResultsComplete =
+        p.lines.length > 0 &&
+        p.lines.every(
+            (line) =>
+                String(line.test_result_value ?? "").trim() !== "" &&
+                (!line.test_unit_2 ||
+                    String(line.test_result_value_2 ?? "").trim() !== ""),
+        );
+    const [allResultsTyped, setAllResultsTyped] = useState(
+        initialResultsComplete,
+    );
+    const [selectedStatus, setSelectedStatus] = useState(
+        String(p.record.test_status),
+    );
+    const refreshResultsCompletion = () => {
+        const forms = Array.from(
+            document.querySelectorAll('[data-result-form="true"]'),
+        );
+        setAllResultsTyped(
+            forms.length > 0 &&
+                forms.every((form) => {
+                    const primary = form.querySelector(
+                        '[name="test_result_value"]',
+                    );
+                    const secondary = form.querySelector(
+                        '[name="test_result_value_2"]',
+                    );
+                    return (
+                        String(primary?.value ?? "").trim() !== "" &&
+                        (!secondary ||
+                            String(secondary.value ?? "").trim() !== "")
+                    );
+                }),
+        );
+    };
+    const shouldPromptReadyStatus =
+        allResultsTyped && selectedStatus !== "3";
+
     return (
         <>
             <Heading>
-                <Button href={`/print/result/${p.record.id}`}>
+                <Button
+                    href={isReady ? `/print/result/${p.record.id}` : undefined}
+                    disabled={!isReady}
+                    title={!isReady ? t("Le statut doit être Prêt pour consulter le rapport.") : undefined}
+                >
                     <FileText size={18} />
                     {t("Compte rendu")}
                 </Button>
@@ -95,7 +212,10 @@ export function Results() {
                                         : t("\xC0 renseigner")}
                                 </span>
                             </div>
-                            <Form action={`/results/${line.id}`} method="PUT">
+                            <AutoSaveResultForm
+                                action={`/results/${line.id}`}
+                                onValuesChange={refreshResultsCompletion}
+                            >
                                 <input
                                     type="hidden"
                                     name="_result_id"
@@ -180,27 +300,44 @@ export function Results() {
                                         {t("Enregistrer ce r\xE9sultat")}
                                     </Button>
                                 </div>
-                            </Form>
+                            </AutoSaveResultForm>
                         </section>
                     ))}
                 </div>
                 <aside>
                     {can("collection.manage") && (
                         <section className="panel form-panel">
-                            <h2>{t("Suivi du dossier")}</h2>
+                            <h2>{t("Statut des analyses")}</h2>
                             <Form
                                 action={`/sample-collection/${p.record.id}/status`}
                                 method="PUT"
                             >
-                                <Field
-                                    field={{
-                                        name: "test_status",
-                                        label: t("Statut du dossier"),
-                                        type: "select",
-                                        options: statuses,
-                                    }}
-                                    record={p.record}
+                                <input
+                                    type="hidden"
+                                    name="return_to"
+                                    value="results"
                                 />
+                                <div
+                                    className={
+                                        shouldPromptReadyStatus
+                                            ? "status-ready-control status-ready-prompt"
+                                            : "status-ready-control"
+                                    }
+                                >
+                                    <Field
+                                        field={{
+                                            name: "test_status",
+                                            label: t("Statut du dossier"),
+                                            type: "select",
+                                            options: statuses,
+                                            onChange: (event) =>
+                                                setSelectedStatus(
+                                                    event.target.value,
+                                                ),
+                                        }}
+                                        record={p.record}
+                                    />
+                                </div>
                                 <Button className="full">
                                     {t("Mettre \xE0 jour")}
                                 </Button>
@@ -208,7 +345,9 @@ export function Results() {
                             <Button
                                 secondary
                                 className="full"
-                                href={`/print/result/${p.record.id}`}
+                                href={isReady ? `/print/result/${p.record.id}` : undefined}
+                                disabled={!isReady}
+                                title={!isReady ? t("Le statut doit être Prêt pour consulter le rapport.") : undefined}
                             >
                                 {t("Voir le compte rendu")}
                             </Button>
@@ -661,15 +800,67 @@ export function Invoice() {
     );
 }
 export function Report() {
+    const [emailOpen, setEmailOpen] = useState(false);
+    const [emailBusy, setEmailBusy] = useState(false);
+    const [emailNotice, setEmailNotice] = useState("");
+    const [email, setEmail] = useState(p.record.patient?.email || "");
+    const [subject, setSubject] = useState(`Rapport d’analyses · Dossier #${p.record.id}`);
+    const [message, setMessage] = useState(
+        `Bonjour ${name(p.record.patient)},\n\nVeuillez trouver votre rapport d’analyses en pièce jointe.\n\nCordialement,\n${p.laboratory?.laboratory_name || "Le laboratoire"}`,
+    );
+    const isReady = String(p.record.test_status) === "3";
+    const hasAllResults =
+        p.lines.length > 0 &&
+        p.lines.every(
+            (line) =>
+                String(line.test_result_value ?? "").trim() !== "" &&
+                (!line.test_unit_2 ||
+                    String(line.test_result_value_2 ?? "").trim() !== ""),
+        );
+    const reportLocked = !isReady || !hasAllResults;
+    const sendReportEmail = async (event) => {
+        event.preventDefault();
+        setEmailBusy(true);
+        setEmailNotice("");
+        try {
+            const response = await csrfFetch(`/reports/${p.record.id}/email`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Accept: "application/json" },
+                body: JSON.stringify({ to: email, subject, message }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || "Envoi impossible.");
+            setEmailNotice(data.message || "Rapport envoyé avec succès.");
+            setTimeout(() => setEmailOpen(false), 1200);
+        } catch (error) {
+            setEmailNotice(error.message || "Envoi impossible.");
+        } finally {
+            setEmailBusy(false);
+        }
+    };
+
     return (
         <>
             <Heading>
-                <Button onClick={() => window.print()}>
-                    {t("Imprimer / PDF")}
-                </Button>
+                <div className="report-actions">
+                    {can("email.send") && (
+                        <Button secondary disabled={reportLocked} onClick={() => setEmailOpen(true)}>
+                            <Send size={16} /> {t("Envoyer par e-mail")}
+                        </Button>
+                    )}
+                    <Button
+                        secondary
+                        href={reportLocked ? undefined : `/reports/${p.record.id}/pdf`}
+                        download={`rapport-${p.record.id}.pdf`}
+                        disabled={reportLocked}
+                    >
+                        <Download size={16} /> {t("Télécharger")}
+                    </Button>
+                    <Button disabled={reportLocked} onClick={() => window.print()}>{t("Imprimer / PDF")}</Button>
+                </div>
             </Heading>
             <DocumentLinks />
-            <section className="panel document report-document print-document">
+            <section className={`panel document report-document print-document${reportLocked ? " report-content-locked" : ""}`}>
                 <div className="document-head">
                     {p.laboratory?.logo_url && (
                         <img
@@ -749,7 +940,63 @@ export function Report() {
                     {p.laboratory?.footer_title3}
                 </div>
             </section>
-            <ResultNotification />
+            {!reportLocked && <ResultNotification />}
+            {reportLocked && (
+                <div className="confirm-backdrop report-lock-backdrop" role="presentation">
+                    <section
+                        className="confirm-dialog report-lock-dialog"
+                        role="alertdialog"
+                        aria-modal="true"
+                        aria-labelledby="report-lock-title"
+                    >
+                        <span className="confirm-dialog-icon">
+                            <AlertTriangle size={20} />
+                        </span>
+                        <div>
+                            <h2 id="report-lock-title">{t("Rapport indisponible")}</h2>
+                            {!hasAllResults && (
+                                <p>{t("Saisissez tous les résultats avant de consulter le rapport.")}</p>
+                            )}
+                            {!isReady && (
+                                <p>{t("Le statut du dossier doit être Prêt.")}</p>
+                            )}
+                        </div>
+                        <div className="confirm-dialog-actions">
+                            <Button href={`/tests/${p.record.id}`}>
+                                {t("Retour aux résultats")}
+                            </Button>
+                        </div>
+                    </section>
+                </div>
+            )}
+            {emailOpen && (
+                <div className="confirm-backdrop report-email-backdrop" role="presentation">
+                    <section className="panel report-email-modal" role="dialog" aria-modal="true" aria-labelledby="report-email-title">
+                        <header>
+                            <div>
+                                <span className="eyebrow">{t("PARTAGER LE RAPPORT")}</span>
+                                <h2 id="report-email-title">{t("Envoyer le rapport par e-mail")}</h2>
+                            </div>
+                            <button type="button" className="icon-button" aria-label={t("Fermer")} onClick={() => setEmailOpen(false)}><X size={17} /></button>
+                        </header>
+                        <form onSubmit={sendReportEmail}>
+                            <label className="field">
+                                {t("Adresse e-mail")}
+                                <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="patient@example.com" />
+                                <small className="field-help">{p.record.patient?.email ? t("L’adresse du patient est préremplie.") : t("Vous pouvez saisir une autre adresse.")}</small>
+                            </label>
+                            <label className="field">{t("Objet")}<input required value={subject} onChange={(event) => setSubject(event.target.value)} /></label>
+                            <label className="field">{t("Message")}<textarea required rows="6" value={message} onChange={(event) => setMessage(event.target.value)} /></label>
+                            <p className="report-email-attachment"><FileText size={16} /> {t("Le rapport PDF sera joint automatiquement.")}</p>
+                            {emailNotice && <p className="alert-inline success" role="status">{emailNotice}</p>}
+                            <div className="confirm-dialog-actions">
+                                <Button type="button" secondary onClick={() => setEmailOpen(false)}>{t("Annuler")}</Button>
+                                <Button disabled={emailBusy}><Send size={15} /> {emailBusy ? t("Envoi…") : t("Envoyer")}</Button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            )}
         </>
     );
 }

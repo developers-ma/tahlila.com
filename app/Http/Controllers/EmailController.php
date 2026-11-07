@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Mail\TestResultReady;
 use App\Models\EmailSetting;
+use App\Models\LaboratorySetting;
+use App\Models\Test;
 use App\Services\MailboxService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -17,6 +21,69 @@ use Throwable;
 
 class EmailController extends Controller
 {
+    public function downloadReport(Test $test): Response
+    {
+        $test->load(['patient']);
+        $lines = DB::table('test_for_patients as lines')
+            ->leftJoin('prices', 'prices.id', '=', 'lines.price_id')
+            ->leftJoin('groups', 'groups.id', '=', 'lines.group_id')
+            ->leftJoin('categories', 'categories.id', '=', 'lines.category_id')
+            ->where('lines.test_id', $test->id)
+            ->select('prices.*', 'lines.*', 'groups.group_name', 'categories.category_name')
+            ->get();
+        $pdf = Pdf::loadView('reports.result-pdf', [
+            'test' => $test,
+            'lines' => $lines,
+            'laboratory' => LaboratorySetting::first(),
+        ])->setPaper('a4');
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="rapport-'.$test->id.'.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    public function sendReportEmail(Request $request, Test $test): JsonResponse
+    {
+        $validated = $request->validate([
+            'to' => ['required', 'email', 'max:255'],
+            'subject' => ['required', 'string', 'max:255'],
+            'message' => ['required', 'string', 'max:100000'],
+        ]);
+
+        $settings = EmailSetting::first();
+        if ($settings?->email_notification !== 'true') {
+            return response()->json(['success' => false, 'message' => 'Les notifications par e-mail sont désactivées.'], 422);
+        }
+
+        try {
+            $test->load(['patient', 'prices.groups', 'prices.categories']);
+            $lines = DB::table('test_for_patients as lines')
+                ->leftJoin('prices', 'prices.id', '=', 'lines.price_id')
+                ->leftJoin('groups', 'groups.id', '=', 'lines.group_id')
+                ->leftJoin('categories', 'categories.id', '=', 'lines.category_id')
+                ->where('lines.test_id', $test->id)
+                ->select('prices.*', 'lines.*', 'groups.group_name', 'categories.category_name')
+                ->get();
+            $pdf = Pdf::loadView('reports.result-pdf', [
+                'test' => $test,
+                'lines' => $lines,
+                'laboratory' => LaboratorySetting::first(),
+            ])->setPaper('a4');
+
+            Mail::html('<div style="font-family:Arial,sans-serif;line-height:1.6">'.nl2br(e($validated['message'])).'</div>', function ($mail) use ($validated, $pdf, $test): void {
+                $mail->to($validated['to'])->subject($validated['subject']);
+                $mail->attachData($pdf->output(), 'rapport-'.$test->id.'.pdf', ['mime' => 'application/pdf']);
+            });
+
+            return response()->json(['success' => true, 'message' => 'Rapport envoyé avec succès.']);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json(['success' => false, 'message' => 'Envoi impossible. Vérifiez la configuration SMTP.'], 502);
+        }
+    }
     public function sendTestResultEmail(Request $request): JsonResponse
     {
         $request->validate(['email' => 'required|email|max:255']);

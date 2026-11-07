@@ -61,6 +61,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/email/messages/{uid}/flag', [EmailController::class, 'flag'])->whereNumber('uid')->middleware('permission:email.send')->name('email.messages.flag');
     Route::get('/email/messages/{uid}/attachments/{part}', [EmailController::class, 'attachment'])->whereNumber('uid')->where('part', '[0-9.]+')->middleware('permission:email.send')->name('email.attachments.download');
     Route::post('/send-test-result-email', [EmailController::class, 'sendTestResultEmail'])->middleware('permission:email.send')->name('send.email.results');
+    Route::post('/reports/{test}/email', [EmailController::class, 'sendReportEmail'])->middleware('permission:email.send')->name('reports.email');
+    Route::get('/reports/{test}/pdf', [EmailController::class, 'downloadReport'])->middleware('permission:results.manage')->name('reports.pdf');
     Route::post('/chat/messages', [ChatController::class, 'store'])->middleware('permission:chat.use')->name('chat.messages.store');
     Route::get('/api/chat/conversation/{user}', [ChatController::class, 'conversation'])->middleware('permission:chat.use')->name('chat.conversation');
     Route::get('/api/chat/unread', [ChatController::class, 'unread'])->middleware('permission:chat.use')->name('chat.unread');

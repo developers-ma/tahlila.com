@@ -61,6 +61,10 @@ class ResultController extends Controller
             ]);
         
             $results->update($validatedData);
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Résultat enregistré.']);
+            }
         
             return redirect('/tests/'.$results->test_id)->with('success', 'Résultat enregistré.');
         }

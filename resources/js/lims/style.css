@@ -1217,6 +1217,71 @@ tbody tr:hover {
     background: #244d0f;
 }
 
+.table-action-print {
+    border-color: var(--green);
+    color: #fff;
+    background: var(--green);
+}
+
+.table-action-print svg,
+.table-action-print:hover svg,
+.table-action-print:focus-visible svg {
+    color: currentColor;
+}
+
+.table-action-print:hover,
+.table-action-print:focus-visible {
+    border-color: #244d0f;
+    color: #fff;
+    background: #244d0f;
+}
+
+.table-action-print:disabled {
+    cursor: not-allowed;
+    border-color: #dfe5da;
+    color: #98a393;
+    background: #f2f4f0;
+    box-shadow: none;
+    transform: none;
+}
+
+.table-action-print:disabled svg {
+    color: currentColor;
+}
+
+.table-action-tooltip {
+    position: relative;
+    display: inline-flex;
+}
+
+.table-action-tooltip::after {
+    position: absolute;
+    z-index: 30;
+    right: 0;
+    bottom: calc(100% + 9px);
+    width: max-content;
+    max-width: 230px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    color: #fff;
+    background: #172217;
+    box-shadow: 0 8px 24px rgba(16, 31, 14, 0.18);
+    content: attr(data-tooltip);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px);
+    transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.table-action-tooltip:hover::after,
+.table-action-tooltip:focus-within::after {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .text-action {
     display: inline-flex;
     align-items: center;
@@ -1996,6 +2061,53 @@ textarea {
     border-radius: 50%;
     animation: alert-spin 700ms linear infinite;
     content: "";
+}
+
+.result-autosave-status {
+    display: block;
+    min-height: 18px;
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    text-align: right;
+}
+
+.result-autosave-status.saved {
+    color: var(--green);
+}
+
+.result-autosave-status.error {
+    color: #b74343;
+}
+
+.status-ready-prompt select {
+    border-color: var(--green);
+    animation: status-ready-pulse 1.4s ease-in-out infinite;
+}
+
+.status-ready-control .field > label {
+    visibility: hidden;
+}
+
+@keyframes status-ready-pulse {
+    0%,
+    100% {
+        border-color: var(--green);
+        box-shadow: 0 0 0 0 rgba(65, 135, 31, 0.08);
+    }
+
+    50% {
+        border-color: #6fbb43;
+        box-shadow: 0 0 0 5px rgba(65, 135, 31, 0.18);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .status-ready-prompt select {
+        animation: none;
+        box-shadow: 0 0 0 3px rgba(65, 135, 31, 0.16);
+    }
 }
 
 .confirm-backdrop {
@@ -4353,6 +4465,66 @@ textarea {
 
 .report-values span {
     color: var(--muted);
+}
+
+.report-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.report-content-locked {
+    filter: blur(8px);
+    pointer-events: none;
+    user-select: none;
+}
+
+.report-lock-backdrop {
+    z-index: 1200;
+}
+
+.report-lock-dialog p + p {
+    margin-top: 6px;
+}
+
+.report-email-backdrop {
+    z-index: 100;
+}
+
+.report-email-modal {
+    width: min(100% - 32px, 620px);
+    margin: 0;
+    padding: 24px;
+    box-shadow: 0 24px 70px rgba(18, 44, 25, 0.2);
+}
+
+.report-email-modal > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.report-email-modal h2 {
+    margin: 6px 0 0;
+    font-size: 19px;
+}
+
+.report-email-modal textarea {
+    resize: vertical;
+}
+
+.report-email-attachment {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #dce8d6;
+    border-radius: 9px;
+    padding: 10px 12px;
+    color: #4e7145;
+    background: #f5faef;
+    font-size: 10px;
 }
 
 .report-line p {

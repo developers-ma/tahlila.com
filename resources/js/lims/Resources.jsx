@@ -1,5 +1,5 @@
 import { t } from "./i18n";
-import { ArrowUpRight, Barcode, Pencil, Plus, ReceiptText } from "lucide-react";
+import { ArrowUpRight, Barcode, Pencil, Plus, Printer, ReceiptText } from "lucide-react";
 import { can, p, money, date, name } from "./data";
 import {
     Button,
@@ -40,7 +40,17 @@ export function OrderTable({ rows = p.rows, mode = p.screen }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {rows?.data.map((row) => (
+                        {rows?.data.map((row) => {
+                            const resultCount = Number(row.result_lines_count ?? 0);
+                            const completedResultCount = Number(row.completed_result_lines_count ?? 0);
+                            const isResultReady = String(row.test_status) === "3";
+                            const canPrintResult =
+                                mode === "results" &&
+                                isResultReady &&
+                                resultCount > 0 &&
+                                completedResultCount === resultCount;
+
+                            return (
                             <tr key={row.id}>
                                 <td>
                                     <a
@@ -93,10 +103,46 @@ export function OrderTable({ rows = p.rows, mode = p.screen }) {
                                                     ? t("Facture")
                                                     : mode === "sample-collection"
                                                       ? t("Pr\xE9lever")
+                                                      : mode === "results"
+                                                        ? t("Saisir les résultats")
                                                       : t("Ouvrir")}
                                             </a>
                                         )}
-                                        {can("orders.manage") && (
+                                        {mode === "results" &&
+                                            can("results.manage") &&
+                                            (canPrintResult ? (
+                                                <a
+                                                    href={`/print/result/${row.id}`}
+                                                    className="table-action table-action-print"
+                                                >
+                                                    <Printer size={14} />
+                                                    {t("Imprimer le résultat")}
+                                                </a>
+                                            ) : (
+                                                <span
+                                                    className="table-action-tooltip"
+                                                    data-tooltip={t(
+                                                        !isResultReady
+                                                            ? "Le statut doit être Prêt avant l’impression."
+                                                            : "Complétez tous les résultats avant d’imprimer.",
+                                                    )}
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        className="table-action table-action-print"
+                                                        disabled
+                                                        aria-label={t(
+                                                            !isResultReady
+                                                                ? "Le statut doit être Prêt avant l’impression."
+                                                                : "Complétez tous les résultats avant d’imprimer.",
+                                                        )}
+                                                    >
+                                                        <Printer size={14} />
+                                                        {t("Imprimer le résultat")}
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        {mode !== "results" && can("orders.manage") && (
                                             <a
                                                 href={`/tests/${row.id}/edit`}
                                                 className="table-action"
@@ -119,7 +165,8 @@ export function OrderTable({ rows = p.rows, mode = p.screen }) {
                                     </div>
                                 </td>
                             </tr>
-                        ))}
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

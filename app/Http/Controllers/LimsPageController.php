@@ -155,6 +155,32 @@ class LimsPageController extends Controller
         } elseif (in_array($screen, ['dashboard', 'results', 'invoices', 'sample-collection'])) {
             $page['title'] = ['dashboard' => 'Une journée bien organisée.', 'results' => 'Résultats', 'invoices' => 'Factures & règlements', 'sample-collection' => 'Prélèvements & codes-barres'][$screen];
             $query = Test::with('patient');
+            if ($screen === 'results') {
+                $query->select('tests.*')
+                    ->selectSub(
+                        DB::table('test_for_patients as result_lines')
+                            ->selectRaw('COUNT(*)')
+                            ->whereColumn('result_lines.test_id', 'tests.id'),
+                        'result_lines_count'
+                    )
+                    ->selectSub(
+                        DB::table('test_for_patients as completed_lines')
+                            ->join('prices as result_prices', 'result_prices.id', '=', 'completed_lines.price_id')
+                            ->selectRaw('COUNT(*)')
+                            ->whereColumn('completed_lines.test_id', 'tests.id')
+                            ->whereNotNull('completed_lines.test_result_value')
+                            ->where('completed_lines.test_result_value', '!=', '')
+                            ->where(function ($completed) {
+                                $completed->whereNull('result_prices.test_unit_2')
+                                    ->orWhere('result_prices.test_unit_2', '')
+                                    ->orWhere(function ($secondResult) {
+                                        $secondResult->whereNotNull('completed_lines.test_result_value_2')
+                                            ->where('completed_lines.test_result_value_2', '!=', '');
+                                    });
+                            }),
+                        'completed_result_lines_count'
+                    );
+            }
             if ($request->filled('q')) {
                 $q = $request->string('q')->toString();
                 $query->where(fn ($query) => $query->where('id', $q)->orWhereHas('patient', fn ($p) => $p->where('firstname', 'like', "%$q%")->orWhere('lastname', 'like', "%$q%")->orWhere('id_card', 'like', "%$q%")));

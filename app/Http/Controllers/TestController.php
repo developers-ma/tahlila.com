@@ -27,6 +27,11 @@ class TestController extends Controller
       ]);
   
       $test->update($validated);
+
+      if ($request->input('return_to') === 'results') {
+          return redirect('/results')->with('success', 'Status updated successfully.');
+      }
+
       return redirect()->route('sample-collection')->with('success', 'Status updated successfully.');
 
     }
