@@ -97,7 +97,10 @@ const settingsItems = [
 ];
 
 const isSettingsItemActive = (href) =>
-    p.path === href || p.path.startsWith(`${href}/`);
+    window.location.pathname === href ||
+    window.location.pathname.startsWith(`${href}/`) ||
+    p.path === href ||
+    p.path.startsWith(`${href}/`);
 
 function SettingsShell({ children, description }) {
     return (
@@ -509,6 +512,81 @@ function PalettePreview({ colors }) {
     );
 }
 
+const interfacePalettes = {
+    current: {
+        label: "Tahlila classique",
+        description: "La palette actuelle de votre laboratoire.",
+        colors: {
+            primary_color: "#000000",
+            secondary_color: "#b8ed83",
+            tertiary_color: "#e8f4da",
+            neutral_color: "#7c8a71",
+            background_color: "#f7f8f5",
+            font_color: "#203023",
+            success_color: "#58852a",
+            info_color: "#5579b0",
+            warning_color: "#947325",
+            error_color: "#b04336",
+        },
+    },
+    forest: {
+        label: "Forêt profonde",
+        description: "Vert profond avec texte blanc pour les actions.",
+        colors: {
+            primary_color: "#053620",
+            secondary_color: "#d9eadf",
+            tertiary_color: "#e8f2eb",
+            neutral_color: "#718278",
+            background_color: "#f7faf8",
+            font_color: "#053620",
+            success_color: "#2d7a4d",
+            info_color: "#49759b",
+            warning_color: "#9a762e",
+            error_color: "#ad4d43",
+        },
+    },
+};
+
+function PaletteSelector({ colors, onSelect }) {
+    const isSelected = (palette) =>
+        Object.entries(palette.colors).every(
+            ([key, value]) => colors[key]?.toLowerCase() === value,
+        );
+
+    return (
+        <div className="interface-palettes" aria-label={t("Palettes de thème")}>
+            <div className="interface-palettes-heading">
+                <div>
+                    <span className="eyebrow">{t("THÈMES")}</span>
+                    <h3>{t("Choisir une palette")}</h3>
+                    <p>{t("Appliquez une base complète puis ajustez chaque couleur si nécessaire.")}</p>
+                </div>
+            </div>
+            <div className="interface-palettes-grid">
+                {Object.entries(interfacePalettes).map(([key, palette]) => (
+                    <button
+                        type="button"
+                        key={key}
+                        className={isSelected(palette) ? "selected" : ""}
+                        onClick={() => onSelect(palette.colors)}
+                    >
+                        <span className="interface-palette-swatch">
+                            <i style={{ backgroundColor: palette.colors.primary_color }} />
+                            <i style={{ backgroundColor: palette.colors.secondary_color }} />
+                            <i style={{ backgroundColor: palette.colors.tertiary_color }} />
+                        </span>
+                        <span>
+                            <strong>{t(palette.label)}</strong>
+                            <small>{t(palette.description)}</small>
+                        </span>
+                        <span className="interface-palette-check">✓</span>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export function SettingsForm() {
     const section = p.screen.replace("setting.", "");
     const config = formConfigs[section];
@@ -550,6 +628,14 @@ export function SettingsForm() {
                             <div
                                 className={`settings-fields ${group.layout || ""}`}
                             >
+                                {section === "colors" && group.title === "Palette de l’interface" && (
+                                    <PaletteSelector
+                                        colors={colors}
+                                        onSelect={(palette) =>
+                                            setColors((current) => ({ ...current, ...palette }))
+                                        }
+                                    />
+                                )}
                                 {group.fields.map((name) => {
                                     const field = fields[name];
                                     if (!field) return null;

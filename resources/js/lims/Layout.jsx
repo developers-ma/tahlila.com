@@ -194,7 +194,21 @@ export function Layout({ children }) {
                 </nav>
                 <div className="sidebar-bottom">
                     {can("settings.manage") && (
-                        <a href="/settings">
+                        <a
+                            href="/settings"
+                            className={
+                                p.path === "/settings" ||
+                                p.path.startsWith("/setting/")
+                                    ? "active"
+                                    : ""
+                            }
+                            aria-current={
+                                p.path === "/settings" ||
+                                p.path.startsWith("/setting/")
+                                    ? "page"
+                                    : undefined
+                            }
+                        >
                             <Settings size={18} strokeWidth={1.8} />
                             {t("Param\xE8tres")}
                         </a>

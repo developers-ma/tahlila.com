@@ -28,6 +28,10 @@ import { Mailbox } from "./Mailbox";
 import { Chat } from "./Chat";
 function applyPageAppearance() {
     document.documentElement.dir = p.locale === "ar" ? "rtl" : "ltr";
+    document.documentElement.dataset.theme =
+        p.theme?.primary_color?.toLowerCase() === "#053620"
+            ? "forest"
+            : "classic";
     document.title = `${t(p.title)} · Tahlila`;
     if (!p.theme) return;
     for (const [property, field] of Object.entries({
