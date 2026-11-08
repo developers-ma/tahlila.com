@@ -16,8 +16,11 @@ class StockController extends Controller
         $validated = $request->validate([
             'product_name' => 'required',
             'product_color' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'quantity' => 'required',
+            'track_inventory' => 'sometimes|boolean',
+            'quantity' => 'nullable|required_if:track_inventory,1|numeric|min:0',
         ]);
+        $validated['track_inventory'] = $request->has('track_inventory') ? $request->boolean('track_inventory') : true;
+        if (!$validated['track_inventory']) $validated['quantity'] = null;
         Stock::create($validated);
         return redirect()->route('stocks')->with('success', 'Product created successfully.');
 
@@ -28,9 +31,12 @@ class StockController extends Controller
         $validated = $request->validate([
             'product_name' => 'required',
             'product_color' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'quantity' => '',
-            'quantity_used' => '',
+            'track_inventory' => 'sometimes|boolean',
+            'quantity' => 'nullable|required_if:track_inventory,1|numeric|min:0',
+            'quantity_used' => 'nullable|numeric|min:0',
         ]);
+        $validated['track_inventory'] = $request->has('track_inventory') ? $request->boolean('track_inventory') : $product->track_inventory;
+        if (!$validated['track_inventory']) unset($validated['quantity'], $validated['quantity_used']);
         $product->update($validated);
         return redirect()->route('stocks')->with('success', 'Product updated successfully.');
     }

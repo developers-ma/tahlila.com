@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\ChatMessage;
 use App\Models\ColorSetting;
+use App\Models\CollectionTube;
 use App\Models\EmailSetting;
 use App\Models\Group;
 use App\Models\LaboratorySetting;
@@ -106,6 +107,7 @@ class LimsPageController extends Controller
             'groups' => [Group::class, 'Groupes d’analyses', 'groups', [$this->field('group_name', 'Nom du groupe', 'text', true)]],
             'stocks' => [Stock::class, 'Stocks & consommables', 'product', [
                 $this->field('product_name', 'Produit', 'text', true), $this->field('product_color', 'Couleur', 'color'),
+                $this->field('track_inventory', 'Suivre le stock', 'checkbox'),
                 $this->field('quantity', 'Quantité totale', 'number', true), $this->field('quantity_used', 'Quantité utilisée', 'number'),
             ]],
             'prices' => [Price::class, 'Catalogue des analyses', 'prices', [
@@ -115,6 +117,7 @@ class LimsPageController extends Controller
                 $this->field('test_unit_2', 'Deuxième unité'), $this->field('test_reference_value_2', 'Deuxième référence'),
                 $this->field('categories', 'Catégories', 'multiple', false, Category::pluck('category_name', 'id')->all()),
                 $this->field('groups', 'Groupes', 'multiple', false, Group::pluck('group_name', 'id')->all()),
+                $this->field('materials', 'Tubes et matériels de prélèvement nécessaires', 'multiple', false, CollectionTube::where('is_active',true)->orderBy('name')->pluck('name','id')->all()),
                 $this->field('test_required_age', 'Demander l’âge', 'checkbox'), $this->field('test_required_weight', 'Demander le poids', 'checkbox'),
                 $this->field('test_required_height', 'Demander la taille', 'checkbox'), $this->field('test_requiring_conclusion', 'Conclusion', 'checkbox'),
             ]],
@@ -136,6 +139,7 @@ class LimsPageController extends Controller
                 if ($record instanceof Price) {
                     $page['record']['categories'] = $record->categories()->pluck('categories.id');
                     $page['record']['groups'] = $record->groups()->pluck('groups.id');
+                    $page['record']['materials'] = $record->medicalTest?->materialRequirements()->pluck('collection_tube_id') ?? collect();
                 }
                 $page['action'] = '/'.$base.($id ? '/'.$id.($resource === 'stocks' ? '/edit' : '') : ($resource === 'stocks' ? '/create' : ''));
                 $page['method'] = $id ? 'PUT' : 'POST';

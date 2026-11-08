@@ -23,4 +23,5 @@ class Price extends Model
     {
         return $this->belongsToMany(Group::class)->withTimestamps();
     }
+    public function medicalTest(){ return $this->belongsTo(MedicalTest::class); }
 }

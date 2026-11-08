@@ -134,6 +134,7 @@ export function ResourceForm() {
                   : field.name !== "parent_id_card",
           )
         : p.fields;
+    const [trackInventory,setTrackInventory]=useState(p.resource !== "stocks" || p.record?.track_inventory !== false);
 
     return (
         <>
@@ -149,6 +150,8 @@ export function ResourceForm() {
                     <Form action={p.action} method={p.method}>
                         <div className="form-grid">
                             {patientFields.map((field) => {
+                                if(field.name === "track_inventory") return null;
+                                if(p.resource === "stocks" && ["quantity","quantity_used"].includes(field.name) && !trackInventory) return null;
                                 const resolvedField =
                                     field.name === "is_child"
                                         ? {
@@ -206,6 +209,7 @@ export function ResourceForm() {
                                     </Fragment>
                                 );
                             })}
+                            {p.resource === "stocks" && <div className="inventory-tracking"><input type="hidden" name="track_inventory" value={trackInventory?1:0}/><label className="switch-row"><span><strong>{t("Ne pas suivre le stock")}</strong><small>{t("Utilisation illimitée, sans contrôle ni déduction de stock.")}</small></span><input type="checkbox" checked={!trackInventory} onChange={e=>setTrackInventory(!e.target.checked)}/><i/></label></div>}
                         </div>
                         <div className="form-footer">
                             <Button secondary href={`/${p.resource}`}>

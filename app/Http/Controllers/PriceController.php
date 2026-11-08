@@ -11,6 +11,7 @@ use App\Models\Category;
 use App\Models\Group;
 
 use Illuminate\Support\Facades\DB;
+use App\Models\TestMaterialRequirement;
 
 
 class PriceController extends Controller
@@ -29,6 +30,8 @@ class PriceController extends Controller
             'test_unit_2' => '',
             'test_reference_value_2' => '',
             'price' => 'required|numeric',
+            'materials' => 'array',
+            'materials.*' => 'integer|exists:collection_tubes,id',
         ]);
     
         // Create a new Price instance
@@ -48,6 +51,7 @@ class PriceController extends Controller
     
         // Attach the selected groups
         $price->groups()->attach($request->input('groups', []));
+        $this->syncMaterials($price, $request);
     
         return redirect()->route('prices')
                          ->with('success', 'Price created successfully.');
@@ -68,6 +72,8 @@ class PriceController extends Controller
             'test_unit_2' => '',
             'test_reference_value_2' => '',
             'price' => 'required|numeric',
+            'materials' => 'array',
+            'materials.*' => 'integer|exists:collection_tubes,id',
         ]);
 
           // check if checkbox is checked
@@ -84,9 +90,21 @@ class PriceController extends Controller
     
         // Sync the selected groups
         $price->groups()->sync($request->input('groups', []));
+        $this->syncMaterials($price, $request);
     
         return redirect()->route('prices')
                          ->with('success', 'Price updated successfully.');
+    }
+
+    private function syncMaterials(Price $price, Request $request): void
+    {
+        if (!$price->medical_test_id) return;
+        $ids=collect($request->input('materials', []))->map(fn($id)=>(int)$id)->unique()->values();
+        TestMaterialRequirement::where('medical_test_id',$price->medical_test_id)->whereNotIn('collection_tube_id',$ids)->delete();
+        foreach($ids as $index=>$id) TestMaterialRequirement::updateOrCreate(
+            ['medical_test_id'=>$price->medical_test_id,'collection_tube_id'=>$id],
+            ['role'=>$index===0?'primary':'alternative','preference'=>$index+1,'quantity'=>1,'shareable'=>false,'validation_status'=>'to_verify','is_customized'=>true]
+        );
     }
     
 
