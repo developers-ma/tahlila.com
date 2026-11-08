@@ -263,7 +263,9 @@ class LimsPageController extends Controller
                 $page['fields'][] = $this->field('logo', 'Logo du laboratoire', 'file');
             } elseif ($section === 'email') {
                 $page['title'] = 'Messagerie du laboratoire';
-                $page['record'] = EmailSetting::first()?->toArray() ?? [];
+                $emailSetting = EmailSetting::first();
+                $page['mailConfigured'] = $emailSetting?->mailboxConfigured() ?? false;
+                $page['record'] = $emailSetting?->toArray() ?? [];
                 $page['record']['send_email'] = $page['record']['email_notification'] ?? 'false';
                 $page['fields'] = [];
                 foreach (['mail_host' => 'Serveur SMTP', 'mail_port' => 'Port SMTP', 'mail_username' => 'Identifiant SMTP', 'mail_password' => 'Nouveau mot de passe SMTP (vide : conserver)', 'mail_from_address' => 'Adresse d’expédition', 'mail_from_name' => 'Nom de l’expéditeur', 'mail_encryption' => 'Chiffrement SMTP', 'imap_host' => 'Serveur IMAP', 'imap_port' => 'Port IMAP', 'imap_username' => 'Identifiant IMAP', 'imap_password' => 'Nouveau mot de passe IMAP (vide : conserver)', 'imap_encryption' => 'Chiffrement IMAP', 'imap_validate_cert' => 'Vérifier le certificat du serveur'] as $name => $label) {

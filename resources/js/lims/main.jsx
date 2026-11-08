@@ -5,6 +5,7 @@ import { p, replacePage } from "./data";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, useLocation, useNavigate } from "react-router-dom";
 import "./style.css";
+import "./native-desktop.css";
 import { Layout } from "./Layout";
 import { Heading, Empty } from "./components";
 import { Dashboard } from "./Dashboard";

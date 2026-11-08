@@ -68,6 +68,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/email', [EmailController::class, 'sendEmail'])->middleware('permission:email.send')->name('send.email.legacy');
     Route::post('/email/send', [EmailController::class, 'sendEmail'])->middleware('permission:email.send')->name('send.email');
+    Route::get('/email/messages/{uid}', [EmailController::class, 'message'])->whereNumber('uid')->middleware('permission:email.send')->name('email.messages.show');
     Route::post('/email/messages/{uid}/flag', [EmailController::class, 'flag'])->whereNumber('uid')->middleware('permission:email.send')->name('email.messages.flag');
     Route::get('/email/messages/{uid}/attachments/{part}', [EmailController::class, 'attachment'])->whereNumber('uid')->where('part', '[0-9.]+')->middleware('permission:email.send')->name('email.attachments.download');
     Route::post('/send-test-result-email', [EmailController::class, 'sendTestResultEmail'])->middleware('permission:email.send')->name('send.email.results');
@@ -82,6 +83,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/setting/colors', [ColorSettingController::class, 'update'])->middleware('permission:settings.manage')->name('settings.colors.update');
     Route::post('/setting/colors/reset', [ColorSettingController::class, 'reset'])->middleware('permission:settings.manage')->name('settings.colors.reset');
     Route::post('/setting/email', [EmailSettingController::class, 'store'])->middleware('permission:settings.manage')->name('settings.email.store');
+    Route::post('/setting/email/automatic', [EmailSettingController::class, 'automatic'])->name('settings.email.automatic');
     Route::post('/setting/patient-portal', [PatientPortalSettingController::class, 'update'])->middleware('permission:settings.manage')->name('settings.patient-portal.update');
     Route::post('/laboratory-settings', [LaboratorySettingController::class, 'store'])->middleware('permission:settings.manage')->name('laboratory-settings.store');
     Route::post('/languages/{lang}/activate', [LanguageController::class, 'activate'])->middleware('permission:settings.manage')->name('languages.activate');

@@ -114,8 +114,12 @@ export const statuses = {
     2: "En traitement",
     3: "Prêt",
 };
+export const currencyLabel = (currency?: string | null) => {
+    const code = String(currency || "MAD").trim().toUpperCase();
+    return code === "MAD" ? "DH" : code;
+};
 export const money = (value: string | number | null | undefined) =>
-    `${Number(value || 0).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${p.currency}`;
+    `${Number(value || 0).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencyLabel(p.currency)}`;
 export const date = (value?: string | null) =>
     value ? new Date(value).toLocaleDateString("fr-FR") : "—";
 export const name = (patient?: Patient | null) =>

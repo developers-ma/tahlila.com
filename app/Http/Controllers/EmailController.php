@@ -72,7 +72,7 @@ class EmailController extends Controller
                 'laboratory' => LaboratorySetting::first(),
             ])->setPaper('a4');
 
-            Mail::html('<div style="font-family:Arial,sans-serif;line-height:1.6">'.nl2br(e($validated['message'])).'</div>', function ($mail) use ($validated, $pdf, $test): void {
+            Mail::mailer('smtp')->html('<div style="font-family:Arial,sans-serif;line-height:1.6">'.nl2br(e($validated['message'])).'</div>', function ($mail) use ($validated, $pdf, $test): void {
                 $mail->to($validated['to'])->subject($validated['subject']);
                 $mail->attachData($pdf->output(), 'rapport-'.$test->id.'.pdf', ['mime' => 'application/pdf']);
             });
@@ -93,7 +93,7 @@ class EmailController extends Controller
         }
 
         try {
-            Mail::to($request->email)->send(new TestResultReady($request->email));
+            Mail::mailer('smtp')->to($request->email)->send(new TestResultReady($request->email));
 
             return response()->json(['success' => true]);
         } catch (Throwable $exception) {
@@ -103,7 +103,7 @@ class EmailController extends Controller
         }
     }
 
-    public function sendEmail(Request $request): RedirectResponse
+    public function sendEmail(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'to' => ['required', 'string', 'max:2000'],
@@ -122,7 +122,7 @@ class EmailController extends Controller
         $html = '<div style="font-family:Arial,sans-serif;line-height:1.6">'.nl2br(e($validated['message'])).'</div>';
 
         try {
-            Mail::html($html, function ($mail) use ($request, $validated, $to, $cc, $bcc): void {
+            $sentMessage = Mail::mailer('smtp')->html($html, function ($mail) use ($request, $validated, $to, $cc, $bcc): void {
                 $mail->to($to)->subject($validated['subject']);
                 if ($cc !== []) {
                     $mail->cc($cc);
@@ -143,9 +143,23 @@ class EmailController extends Controller
                 }
             });
 
+            if ($sentMessage) {
+                try {
+                    $this->mailbox()->appendToSent($sentMessage->getSymfonySentMessage()->toString());
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+            }
+
             return redirect('/email')->with('success', 'Message envoyé avec succès.');
         } catch (Throwable $exception) {
             report($exception);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Envoi impossible. Le serveur SMTP n’a pas accepté le message.',
+                ], 502);
+            }
 
             return back()->withInput()->with('error', 'Envoi impossible. Vérifiez la configuration SMTP.');
         }
@@ -155,11 +169,28 @@ class EmailController extends Controller
     {
         $validated = $request->validate([
             'folder' => ['required', 'string', 'max:500'],
-            'action' => ['required', 'in:star,unstar,read,unread,delete'],
+            'action' => ['required', 'in:star,unstar,read,unread,archive,delete'],
         ]);
         $this->mailbox()->flag($uid, $validated['folder'], $validated['action']);
 
         return redirect('/email?'.http_build_query(['folder' => $validated['folder']]))->with('success', 'Message mis à jour.');
+    }
+
+    public function message(Request $request, int $uid): JsonResponse
+    {
+        $validated = $request->validate([
+            'folder' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            return response()->json([
+                'message' => $this->mailbox()->message($uid, $validated['folder'] ?? 'INBOX'),
+            ])->header('Cache-Control', 'private, no-store');
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json(['message' => 'Lecture du message impossible.'], 502);
+        }
     }
 
     public function attachment(Request $request, int $uid, string $part): Response|BinaryFileResponse

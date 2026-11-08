@@ -28,6 +28,7 @@ class EmailSettingsServiceProvider extends ServiceProvider
 
         if ($emailSettings) {
             // Override the mail configuration from the database
+            Config::set('mail.default', 'smtp');
             Config::set('mail.mailers.smtp.host', $emailSettings->mail_host);
             Config::set('mail.mailers.smtp.port', $emailSettings->mail_port);
             Config::set('mail.mailers.smtp.encryption', $emailSettings->mail_encryption);

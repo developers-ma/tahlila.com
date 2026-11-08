@@ -47,6 +47,7 @@ export function Form({
     confirm,
     reload = false,
     formRef,
+    onSuccess,
     ...props
 }) {
     const [busy, setBusy] = useState(false);
@@ -147,6 +148,8 @@ export function Form({
                 });
                 return;
             }
+
+            onSuccess?.(data, response);
 
             const target = new URL(response.url, window.location.origin);
             if (data?.screen) {

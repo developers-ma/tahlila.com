@@ -210,6 +210,41 @@ class LimsWorkflowTest extends TestCase
         $this->assertSame(ColorSetting::DEFAULTS, ColorSetting::first()->only(array_keys(ColorSetting::DEFAULTS)));
     }
 
+    public function test_email_setup_can_detect_and_save_a_provider_automatically(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $this->postJson('/setting/email/automatic', [
+            'email' => 'laboratory@gmail.com',
+            'password' => 'application-password',
+            'from_name' => 'Laboratoire Tahlila',
+            'redirect' => '/setting/email',
+        ])->assertOk()
+            ->assertJsonPath('provider', 'Google / Gmail')
+            ->assertJsonPath('smtp', 'smtp.gmail.com:587')
+            ->assertJsonPath('imap', 'imap.gmail.com:993')
+            ->assertJsonPath('redirect', '/setting/email')
+            ->assertJsonMissing(['password' => 'application-password']);
+
+        $settings = EmailSetting::firstOrFail();
+        $this->assertSame('smtp.gmail.com', $settings->mail_host);
+        $this->assertSame('imap.gmail.com', $settings->imap_host);
+        $this->assertSame('laboratory@gmail.com', $settings->mail_username);
+        $this->assertSame('application-password', $settings->mail_password);
+        $this->assertTrue($settings->mailboxConfigured());
+    }
+
+    public function test_professional_email_uses_the_certificate_safe_mail_hostname(): void
+    {
+        $configuration = app(\App\Services\EmailConfigurationDiscoveryService::class)
+            ->discover('contact@professional-domain.invalid');
+
+        $this->assertSame('mail.professional-domain.invalid', $configuration['smtpHost']);
+        $this->assertSame('mail.professional-domain.invalid', $configuration['imapHost']);
+        $this->assertSame(587, $configuration['smtpPort']);
+        $this->assertSame(993, $configuration['imapPort']);
+    }
+
     public function test_patient_insurance_and_child_parent_identity_are_saved(): void
     {
         $this->actingAs(User::factory()->create());

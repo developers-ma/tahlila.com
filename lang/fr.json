@@ -289,5 +289,18 @@
     "Manage laboratory settings": "Gérer les paramètres du laboratoire",
     "Reset colors": "Réinitialiser les couleurs",
     "Restore all default colors?": "Restaurer toutes les couleurs par défaut ?",
-    "Save changes": "Enregistrer les modifications"
+    "Save changes": "Enregistrer les modifications",
+    "AUTOMATIC SETUP": "CONFIGURATION AUTOMATIQUE",
+    "Reconfigure mailbox": "Reconfigurer la messagerie",
+    "Connect your mailbox": "Connecter votre messagerie",
+    "Enter only your email address and password. Tahlila detects the servers and ports automatically.": "Saisissez uniquement votre adresse e-mail et votre mot de passe. Tahlila détecte automatiquement les serveurs et les ports.",
+    "Your email password": "Mot de passe de votre e-mail",
+    "optional": "optionnel",
+    "Detecting provider and installing…": "Détection du fournisseur et installation…",
+    "Configuration complete": "Configuration terminée",
+    "Configuration failed.": "Configuration impossible.",
+    "Manual setup": "Configuration manuelle",
+    "Installing…": "Installation…",
+    "Detect and configure": "Détecter et configurer",
+    "Works with Gmail, Microsoft 365, Outlook, Yahoo, iCloud, Zoho, AOL and professional domains.": "Compatible avec Gmail, Microsoft 365, Outlook, Yahoo, iCloud, Zoho, AOL et les domaines professionnels."
 }

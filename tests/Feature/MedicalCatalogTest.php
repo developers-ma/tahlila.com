@@ -10,6 +10,7 @@ use App\Models\MedicalTest;
 use App\Models\CollectionTube;
 use App\Models\Stock;
 use App\Models\TestMaterialRequirement;
+use App\Models\PaymentMethod;
 use App\Services\CollectionMaterialCalculatorService;
 use App\Services\MedicalCatalogInstaller;
 use Database\Seeders\MedicalCatalogSeeder;
@@ -85,5 +86,27 @@ class MedicalCatalogTest extends TestCase
         $this->assertCount(1,$plan['items']);
         $this->assertCount(2,$plan['items'][0]['analyses']);
         $this->assertSame([],$plan['missing_configuration']);
+    }
+
+    public function test_catalog_prices_use_the_configured_system_currency(): void
+    {
+        $this->seed(MedicalCatalogSeeder::class);
+        PaymentMethod::query()->updateOrCreate(['id'=>1],['currency'=>'EUR']);
+        $test=MedicalTest::where('code','NFS')->firstOrFail();
+
+        app(MedicalCatalogInstaller::class)->install([
+            'installation_id'=>(string)Str::uuid(),
+            'test_ids'=>[$test->id],
+            'group_ids'=>[],
+            'prices'=>[$test->id=>75],
+            'group_prices'=>[],
+            'effective_from'=>'2026-11-08',
+        ],null);
+
+        $this->assertDatabaseHas('laboratory_prices',[
+            'priceable_type'=>LaboratoryTest::class,
+            'amount'=>75,
+            'currency'=>'EUR',
+        ]);
     }
 }

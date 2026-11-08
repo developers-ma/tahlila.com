@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Archive,
     ArrowLeft,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
     CornerUpLeft,
     Forward,
     Inbox,
+    Image as ImageIcon,
+    LoaderCircle,
     Mail,
     MailOpen,
     Paperclip,
@@ -22,14 +27,26 @@ import { p } from "./data";
 import { Button, Form, Heading } from "./components";
 import { t } from "./i18n";
 import "./mailbox.css";
+import { EmailSetupWizard } from "./EmailSetupWizard";
 
 const folderIcons = {
     inbox: Inbox,
     sent: Send,
     drafts: PenLine,
+    archive: Archive,
     trash: Trash2,
     spam: ShieldCheck,
     folder: Archive,
+};
+
+const emptyDraft = {
+    to: "",
+    cc: "",
+    bcc: "",
+    subject: "",
+    message: "",
+    quote: "",
+    reply_message_id: "",
 };
 
 const query = (values) => {
@@ -46,40 +63,166 @@ const addressText = (addresses = []) =>
         .map(({ name, email }) => (name ? `${name} <${email}>` : email))
         .join(", ");
 
+const folderNames = {
+    inbox: "Boîte de réception",
+    sent: "Messages envoyés",
+    drafts: "Brouillons",
+    archive: "Archives",
+    trash: "Corbeille",
+    spam: "Courrier indésirable",
+};
+
+const folderLabel = (item) =>
+    folderNames[item.type]
+        ? t(folderNames[item.type])
+        : item.name
+              .replace(/^INBOX[./]/i, "")
+              .replace(/[._-]+/g, " ")
+              .trim();
+
+const prepareEmailHtml = (html, allowRemoteImages) => {
+    if (!html || typeof DOMParser === "undefined") {
+        return { html: html || "", remoteImages: 0 };
+    }
+    const document = new DOMParser().parseFromString(html, "text/html");
+    let remoteImages = 0;
+    document.querySelectorAll("img[src]").forEach((image) => {
+        const source = image.getAttribute("src") || "";
+        if (/^(https?:)?\/\//i.test(source)) {
+            remoteImages += 1;
+            if (!allowRemoteImages) {
+                image.removeAttribute("src");
+                image.setAttribute("data-blocked-src", source);
+                image.setAttribute("aria-hidden", "true");
+            }
+        }
+    });
+    return { html: document.body.innerHTML, remoteImages };
+};
+
 export function Mailbox() {
     const mailbox = p.mailbox || {};
     const folder = mailbox.folder || "INBOX";
-    const selected = mailbox.selected;
+    const currentSearch = new URLSearchParams(location.search).get("q") || "";
+    const currentPage = mailbox.messages?.page || 1;
+    const lastPage = mailbox.messages?.lastPage || 1;
+    const [selected, setSelected] = useState(mailbox.selected || null);
+    const [loadingUid, setLoadingUid] = useState(null);
+    const [readerError, setReaderError] = useState("");
+    const [showRemoteImages, setShowRemoteImages] = useState(false);
     const [compose, setCompose] = useState(false);
-    const [draft, setDraft] = useState({
-        to: "",
-        cc: "",
-        bcc: "",
-        subject: "",
-        message: "",
-        reply_message_id: "",
-    });
+    const [draft, setDraft] = useState(emptyDraft);
+    const [attachedFiles, setAttachedFiles] = useState([]);
     const [showCopies, setShowCopies] = useState(false);
+    const [setupOpen, setSetupOpen] = useState(false);
+    const [composeMode, setComposeMode] = useState("new");
+    const [sentToast, setSentToast] = useState(false);
+    const draftStorageKey = `tahlila:mail-draft:${p.mailAccount?.email || "default"}`;
 
-    const openComposer = (values = {}) => {
-        setDraft({
-            to: "",
-            cc: "",
-            bcc: "",
-            subject: "",
-            message: "",
-            reply_message_id: "",
-            ...values,
-        });
-        setShowCopies(Boolean(values.cc || values.bcc));
+    useEffect(() => {
+        setSelected(mailbox.selected || null);
+    }, [mailbox.selected?.uid, folder]);
+
+    useEffect(() => {
+        if (!compose || composeMode !== "new") return;
+        const timer = window.setTimeout(() => {
+            const savedDraft = {
+                to: draft.to,
+                cc: draft.cc,
+                bcc: draft.bcc,
+                subject: draft.subject,
+                message: draft.message,
+            };
+            const hasContent = Object.values(savedDraft).some((value) => value.trim());
+            if (hasContent) localStorage.setItem(draftStorageKey, JSON.stringify(savedDraft));
+            else localStorage.removeItem(draftStorageKey);
+        }, 350);
+        return () => window.clearTimeout(timer);
+    }, [compose, composeMode, draft, draftStorageKey]);
+
+    useEffect(() => {
+        if (p.flash?.toLowerCase?.().includes("message envoyé")) {
+            localStorage.removeItem(draftStorageKey);
+            setCompose(false);
+            setSentToast(true);
+        }
+    }, [p.flash, draftStorageKey]);
+
+    useEffect(() => {
+        if (!sentToast) return;
+        const timer = window.setTimeout(() => setSentToast(false), 4200);
+        return () => window.clearTimeout(timer);
+    }, [sentToast]);
+
+    const preparedHtml = useMemo(
+        () => prepareEmailHtml(selected?.html, showRemoteImages),
+        [selected?.html, showRemoteImages],
+    );
+
+    const openComposer = (values = {}, mode = "new") => {
+        let restored = {};
+        if (mode === "new") {
+            try {
+                restored = JSON.parse(localStorage.getItem(draftStorageKey)) || {};
+            } catch {
+                localStorage.removeItem(draftStorageKey);
+            }
+        }
+        const nextDraft = { ...emptyDraft, ...restored, ...values };
+        setDraft(nextDraft);
+        setAttachedFiles([]);
+        setShowCopies(Boolean(nextDraft.cc || nextDraft.bcc));
+        setComposeMode(mode);
         setCompose(true);
+    };
+
+    const discardDraft = () => {
+        if (composeMode === "new") localStorage.removeItem(draftStorageKey);
+        setDraft(emptyDraft);
+        setAttachedFiles([]);
+        setCompose(false);
+    };
+
+    const messageSent = () => {
+        localStorage.removeItem(draftStorageKey);
+        setDraft(emptyDraft);
+        setAttachedFiles([]);
+        setCompose(false);
+        setSentToast(true);
+    };
+
+    const openMessage = async (event, message) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        if (loadingUid || selected?.uid === message.uid) return;
+        setLoadingUid(message.uid);
+        setReaderError("");
+        setShowRemoteImages(false);
+        try {
+            const response = await fetch(
+                `/email/messages/${message.uid}?${new URLSearchParams({ folder })}`,
+                { headers: { Accept: "application/json" } },
+            );
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.message);
+            setSelected(payload.message);
+            window.history.replaceState(
+                {},
+                "",
+                query({ folder, uid: message.uid }),
+            );
+        } catch (error) {
+            setReaderError(error.message || t("Lecture du message impossible."));
+        } finally {
+            setLoadingUid(null);
+        }
     };
 
     if (!p.mailConfigured) {
         return (
             <>
                 <Heading>
-                    <Button secondary href="/setting/email">
+                    <Button secondary type="button" onClick={() => setSetupOpen(true)}>
                         <Settings size={17} />
                         {t("Configuration")}
                     </Button>
@@ -98,7 +241,7 @@ export function Mailbox() {
                                 "Configurez SMTP pour envoyer et IMAP pour recevoir, lire et organiser les messages depuis Tahlila.",
                             )}
                         </p>
-                        <Button href="/setting/email">
+                        <Button type="button" onClick={() => setSetupOpen(true)}>
                             <Settings size={17} />
                             {t("Configurer la messagerie")}
                         </Button>
@@ -133,6 +276,16 @@ export function Mailbox() {
                         </div>
                     </div>
                 </section>
+                {setupOpen && (
+                    <EmailSetupWizard
+                        modal
+                        onClose={() => setSetupOpen(false)}
+                        onManual={() => {
+                            setSetupOpen(false);
+                            window.location.href = "/setting/email?manual=1";
+                        }}
+                    />
+                )}
             </>
         );
     }
@@ -143,16 +296,16 @@ export function Mailbox() {
             subject: selected?.subject?.startsWith("Re:")
                 ? selected.subject
                 : `Re: ${selected?.subject || ""}`,
-            message: `\n\n--- ${t("Message précédent")} ---\n${selected?.text || ""}`,
+            quote: selected?.text || "",
             reply_message_id: selected?.messageId || "",
-        });
+        }, "reply");
     const forward = () =>
         openComposer({
             subject: selected?.subject?.startsWith("Fwd:")
                 ? selected.subject
                 : `Fwd: ${selected?.subject || ""}`,
-            message: `\n\n--- ${t("Message transféré")} ---\n${t("De")} : ${addressText(selected?.from)}\n${t("Objet")} : ${selected?.subject || ""}\n\n${selected?.text || ""}`,
-        });
+            quote: `${t("De")} : ${addressText(selected?.from)}\n${t("Objet")} : ${selected?.subject || ""}\n\n${selected?.text || ""}`,
+        }, "forward");
 
     return (
         <>
@@ -203,7 +356,7 @@ export function Mailbox() {
                                     }
                                 >
                                     <Icon size={17} />
-                                    <span>{item.name}</span>
+                                    <span>{folderLabel(item)}</span>
                                 </a>
                             );
                         })}
@@ -217,8 +370,7 @@ export function Mailbox() {
                             type="search"
                             name="q"
                             defaultValue={
-                                new URLSearchParams(location.search).get("q") ||
-                                ""
+                                currentSearch
                             }
                             placeholder={t("Rechercher dans les messages")}
                         />
@@ -238,22 +390,24 @@ export function Mailbox() {
                             </Button>
                         </div>
                     ) : (mailbox.messages?.data || []).length ? (
-                        <div className="mail-items">
-                            {mailbox.messages.data.map((message) => (
+                        <>
+                            <div className="mail-items">
+                                {mailbox.messages.data.map((message) => (
                                 <a
                                     key={message.uid}
                                     href={query({ folder, uid: message.uid })}
-                                    className={`${message.seen ? "" : "unread"} ${selected?.uid === message.uid ? "selected" : ""}`}
+                                    onClick={(event) => openMessage(event, message)}
+                                    className={`${message.seen ? "" : "unread"} ${selected?.uid === message.uid ? "selected" : ""} ${loadingUid === message.uid ? "loading" : ""}`}
                                 >
                                     <span className="mail-item-star">
-                                        <Star
+                                        {loadingUid === message.uid ? <LoaderCircle className="mail-spin" size={15} /> : <Star
                                             size={15}
                                             fill={
                                                 message.flagged
                                                     ? "currentColor"
                                                     : "none"
                                             }
-                                        />
+                                        />}
                                     </span>
                                     <div>
                                         <strong>
@@ -275,8 +429,26 @@ export function Mailbox() {
                                             : ""}
                                     </time>
                                 </a>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                            {lastPage > 1 && (
+                                <nav className="mail-pagination" aria-label={t("Pagination des messages")}>
+                                    {currentPage > 1 ? (
+                                        <a href={query({ folder, q: currentSearch, page: currentPage - 1 })} aria-label={t("Page précédente")}>
+                                            <ChevronLeft size={16} />
+                                            <span>{t("Précédent")}</span>
+                                        </a>
+                                    ) : <span className="disabled"><ChevronLeft size={16} />{t("Précédent")}</span>}
+                                    <strong>{t("Page {current} sur {total}").replace("{current}", currentPage).replace("{total}", lastPage)}</strong>
+                                    {currentPage < lastPage ? (
+                                        <a href={query({ folder, q: currentSearch, page: currentPage + 1 })} aria-label={t("Page suivante")}>
+                                            <span>{t("Suivant")}</span>
+                                            <ChevronRight size={16} />
+                                        </a>
+                                    ) : <span className="disabled">{t("Suivant")}<ChevronRight size={16} /></span>}
+                                </nav>
+                            )}
+                        </>
                     ) : (
                         <div className="mail-empty">
                             <MailOpen size={30} />
@@ -287,6 +459,7 @@ export function Mailbox() {
                 </div>
 
                 <article className="mail-reader">
+                    {readerError && <div className="mail-reader-error">{readerError}</div>}
                     {selected ? (
                         <>
                             <header>
@@ -297,6 +470,15 @@ export function Mailbox() {
                                     <ArrowLeft size={18} />
                                 </a>
                                 <div className="mail-reader-actions">
+                                    <Form
+                                        action={`/email/messages/${selected.uid}/flag`}
+                                    >
+                                        <input type="hidden" name="folder" value={folder} />
+                                        <input type="hidden" name="action" value="archive" />
+                                        <button title={t("Archiver")}>
+                                            <Archive size={17} />
+                                        </button>
+                                    </Form>
                                     <Form
                                         action={`/email/messages/${selected.uid}/flag`}
                                     >
@@ -352,9 +534,9 @@ export function Mailbox() {
                                     </Form>
                                     <Form
                                         action={`/email/messages/${selected.uid}/flag`}
-                                        confirm={t(
-                                            "Supprimer définitivement ce message ?",
-                                        )}
+                                        confirm={folderNames.trash && folder.toLowerCase().includes("trash")
+                                            ? t("Supprimer définitivement ce message ?")
+                                            : t("Déplacer ce message vers la corbeille ?")}
                                     >
                                         <input
                                             type="hidden"
@@ -405,12 +587,21 @@ export function Mailbox() {
                             </div>
                             <div className="mail-content">
                                 {selected.html ? (
-                                    <div
-                                        className="mail-html"
-                                        dangerouslySetInnerHTML={{
-                                            __html: selected.html,
-                                        }}
-                                    />
+                                    <>
+                                        {preparedHtml.remoteImages > 0 && !showRemoteImages && (
+                                            <div className="mail-images-notice">
+                                                <ImageIcon size={18} />
+                                                <div>
+                                                    <strong>{t("Images externes bloquées")}</strong>
+                                                    <span>{t("Chargez-les uniquement si vous faites confiance à l’expéditeur.")}</span>
+                                                </div>
+                                                <Button type="button" secondary onClick={() => setShowRemoteImages(true)}>
+                                                    {t("Afficher les images")}
+                                                </Button>
+                                            </div>
+                                        )}
+                                        <div className="mail-html" dangerouslySetInnerHTML={{ __html: preparedHtml.html }} />
+                                    </>
                                 ) : (
                                     <pre>{selected.text}</pre>
                                 )}
@@ -480,13 +671,16 @@ export function Mailbox() {
                     className="compose-layer"
                     role="dialog"
                     aria-modal="true"
-                    aria-label={t("Nouveau message")}
+                    aria-label={t(composeMode === "reply" ? "Répondre" : composeMode === "forward" ? "Transférer" : "Nouveau message")}
                 >
-                    <Form action="/email/send" className="compose-window">
+                    <Form action="/email/send" className="compose-window" onSuccess={messageSent}>
                         <header>
                             <div>
                                 <Send size={17} />
-                                <strong>{t("Nouveau message")}</strong>
+                                <div className="compose-heading-copy">
+                                    <strong>{t(composeMode === "reply" ? "Répondre" : composeMode === "forward" ? "Transférer" : "Nouveau message")}</strong>
+                                    <small>{t("Rédigez votre message en toute sécurité")}</small>
+                                </div>
                             </div>
                             <button
                                 type="button"
@@ -561,7 +755,6 @@ export function Mailbox() {
                             }
                         />
                         <textarea
-                            name="message"
                             required
                             placeholder={t("Écrivez votre message…")}
                             value={draft.message}
@@ -571,6 +764,19 @@ export function Mailbox() {
                                     message: event.target.value,
                                 })
                             }
+                        />
+                        {draft.quote && (
+                            <details className="compose-quote">
+                                <summary>
+                                    {t(composeMode === "forward" ? "Message transféré" : "Message précédent")}
+                                </summary>
+                                <pre>{draft.quote}</pre>
+                            </details>
+                        )}
+                        <input
+                            type="hidden"
+                            name="message"
+                            value={`${draft.message}${draft.quote ? `\n\n--- ${t(composeMode === "forward" ? "Message transféré" : "Message précédent")} ---\n${draft.quote}` : ""}`}
                         />
                         <input
                             type="hidden"
@@ -585,14 +791,39 @@ export function Mailbox() {
                                     type="file"
                                     name="attachments[]"
                                     multiple
+                                    onChange={(event) => setAttachedFiles(Array.from(event.target.files || []))}
                                 />
                             </label>
-                            <Button type="submit">
-                                {t("Envoyer")}
-                                <Send size={16} />
-                            </Button>
+                            {!!attachedFiles.length && (
+                                <div className="compose-file-list" title={attachedFiles.map((file) => file.name).join(", ")}>
+                                    <Paperclip size={14} />
+                                    <span>{attachedFiles.length === 1 ? attachedFiles[0].name : t("{count} fichiers joints").replace("{count}", attachedFiles.length)}</span>
+                                </div>
+                            )}
+                            <div className="compose-footer-actions">
+                                <Button type="button" secondary className="compose-discard" onClick={discardDraft}>
+                                    <Trash2 size={15} />
+                                    {t("Abandonner")}
+                                </Button>
+                                <Button type="submit">
+                                    {t("Envoyer")}
+                                    <Send size={16} />
+                                </Button>
+                            </div>
                         </footer>
                     </Form>
+                </div>
+            )}
+            {sentToast && (
+                <div className="mail-success-toast" role="status" aria-live="polite">
+                    <CheckCircle2 size={20} />
+                    <div>
+                        <strong>{t("Message envoyé")}</strong>
+                        <span>{t("Votre e-mail a été envoyé avec succès.")}</span>
+                    </div>
+                    <button type="button" onClick={() => setSentToast(false)} aria-label={t("Fermer")}>
+                        <X size={16} />
+                    </button>
                 </div>
             )}
         </>

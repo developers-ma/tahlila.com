@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { csrfFetch, p } from "./data";
 import { Button, Heading, Form, Field } from "./components";
+import { EmailSetupWizard } from "./EmailSetupWizard";
 
 const settingsItems = [
     {
@@ -605,6 +606,7 @@ export function SettingsForm() {
     const submitted = p.old?._submitted ? { ...record, ...p.old } : record;
     const [colors, setColors] = useState(() => ({ ...submitted }));
     const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+    const [emailManual, setEmailManual] = useState(() => section === "email" && (new URLSearchParams(window.location.search).get("manual") === "1" || Object.keys(p.errors || {}).length > 0));
     const formRef = useRef(null);
 
     const confirmColorReset = () => {
@@ -619,6 +621,14 @@ export function SettingsForm() {
 
     return (
         <SettingsShell description={config.description}>
+            {section === "email" && (
+                <EmailSetupWizard
+                    configured={Boolean(p.mailConfigured)}
+                    successRedirect="/setting/email"
+                    onManual={() => setEmailManual(true)}
+                />
+            )}
+            {(section !== "email" || emailManual) && (
             <Form
                 action={p.action}
                 method={p.method}
@@ -808,6 +818,7 @@ export function SettingsForm() {
                     </div>
                 )}
             </Form>
+            )}
         </SettingsShell>
     );
 }

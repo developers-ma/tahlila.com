@@ -27,15 +27,17 @@ class MailboxService
                 $decoded = function_exists('imap_utf7_decode') ? imap_utf7_decode($name) : $name;
 
                 return ['id' => $name, 'name' => $decoded, 'type' => $this->folderType($decoded)];
-            })->sortBy(fn (array $folder) => match ($folder['type']) {
-                'inbox' => 0, 'sent' => 1, 'drafts' => 2, 'trash' => 3, 'spam' => 4, default => 5,
+            })->sortBy(fn (array $folder) => [$this->folderOrder($folder['type']), $this->folderPreference($folder['name'], $folder['type'])])
+                ->unique(fn (array $folder) => $folder['type'] === 'folder' ? 'folder:'.$folder['id'] : $folder['type'])
+                ->sortBy(fn (array $folder) => match ($folder['type']) {
+                'inbox' => 0, 'sent' => 1, 'drafts' => 2, 'archive' => 3, 'trash' => 4, 'spam' => 5, default => 6,
             })->values()->all();
         } finally {
             imap_close($connection);
         }
     }
 
-    public function messages(string $folder = 'INBOX', string $search = '', int $page = 1, int $perPage = 30): array
+    public function messages(string $folder = 'INBOX', string $search = '', int $page = 1, int $perPage = 20): array
     {
         $connection = $this->connect($folder);
         try {
@@ -138,12 +140,33 @@ class MailboxService
                 'unstar' => imap_clearflag_full($connection, (string) $uid, '\\Flagged', ST_UID),
                 'read' => imap_setflag_full($connection, (string) $uid, '\\Seen', ST_UID),
                 'unread' => imap_clearflag_full($connection, (string) $uid, '\\Seen', ST_UID),
-                'delete' => $this->moveToTrash($connection, $uid),
+                'archive' => $this->moveToFolderType($connection, $uid, 'archive', 'INBOX.Archive'),
+                'delete' => $this->folderType($folder) === 'trash'
+                    ? imap_delete($connection, (string) $uid, FT_UID)
+                    : $this->moveToFolderType($connection, $uid, 'trash', 'INBOX.Trash'),
                 default => throw new RuntimeException('Action de messagerie inconnue.'),
             };
-            if ($action === 'delete') {
+            if (in_array($action, ['archive', 'delete'], true)) {
                 imap_expunge($connection);
             }
+        } finally {
+            imap_close($connection);
+        }
+    }
+
+    public function appendToSent(string $message): bool
+    {
+        $connection = $this->connect('INBOX');
+        try {
+            $folder = $this->findFolderByType($connection, 'sent') ?? 'INBOX.Sent';
+            if (! $this->folderExists($connection, $folder)) {
+                $mailbox = $this->server().$folder;
+                if (! imap_createmailbox($connection, function_exists('imap_utf7_encode') ? imap_utf7_encode($mailbox) : $mailbox)) {
+                    return false;
+                }
+            }
+
+            return imap_append($connection, $this->server().$folder, $message, '\\Seen');
         } finally {
             imap_close($connection);
         }
@@ -236,7 +259,7 @@ class MailboxService
 
     private function partMetadata(object $part, string $section): array
     {
-        $parameters = [...($part->parameters ?? []), ...($part->dparameters ?? [])];
+        $parameters = [...array_values((array) ($part->parameters ?? [])), ...array_values((array) ($part->dparameters ?? []))];
         $values = [];
         foreach ($parameters as $parameter) {
             $values[strtolower($parameter->attribute ?? '')] = $this->decode($parameter->value ?? '');
@@ -301,7 +324,18 @@ class MailboxService
             foreach (iterator_to_array($element->attributes) as $attribute) {
                 $name = strtolower($attribute->name);
                 $value = strtolower(trim($attribute->value));
-                if ($name === 'style' || str_starts_with($name, 'on') || ($name === 'src' && ! str_starts_with($value, 'cid:')) || (in_array($name, ['href', 'src'], true) && str_starts_with($value, 'javascript:'))) {
+                $unsafeSource = $name === 'src' && ! preg_match('/^(https?:|cid:|data:image\/)/i', $value);
+                if ($name === 'style') {
+                    $safeStyle = $this->sanitizeInlineStyle($attribute->value);
+                    if ($safeStyle === '') {
+                        $element->removeAttribute($attribute->name);
+                    } else {
+                        $element->setAttribute('style', $safeStyle);
+                    }
+
+                    continue;
+                }
+                if (str_starts_with($name, 'on') || $unsafeSource || (in_array($name, ['href', 'src'], true) && str_starts_with($value, 'javascript:'))) {
                     $element->removeAttribute($attribute->name);
                 }
             }
@@ -315,6 +349,39 @@ class MailboxService
         return $root ? collect(iterator_to_array($root->childNodes))->map(fn ($node) => $document->saveHTML($node))->implode('') : strip_tags($html);
     }
 
+    private function sanitizeInlineStyle(string $style): string
+    {
+        $allowed = [
+            'background', 'background-color', 'border', 'border-bottom', 'border-collapse',
+            'border-color', 'border-left', 'border-radius', 'border-right', 'border-spacing',
+            'border-style', 'border-top', 'border-width', 'box-sizing', 'color', 'direction',
+            'display', 'float', 'font', 'font-family', 'font-size', 'font-style', 'font-weight',
+            'height', 'letter-spacing', 'line-height', 'margin', 'margin-bottom', 'margin-left',
+            'margin-right', 'margin-top', 'max-height', 'max-width', 'min-height', 'min-width',
+            'opacity', 'overflow', 'overflow-wrap', 'padding', 'padding-bottom', 'padding-left',
+            'padding-right', 'padding-top', 'table-layout', 'text-align', 'text-decoration',
+            'text-indent', 'text-transform', 'vertical-align', 'white-space', 'width',
+            'word-break', 'word-spacing', 'word-wrap',
+        ];
+        $safe = [];
+        foreach (explode(';', $style) as $declaration) {
+            if (! str_contains($declaration, ':')) {
+                continue;
+            }
+            [$property, $value] = array_map('trim', explode(':', $declaration, 2));
+            $property = strtolower($property);
+            if (! in_array($property, $allowed, true) || $value === '') {
+                continue;
+            }
+            if (preg_match('/(?:url\s*\(|expression\s*\(|javascript\s*:|@import|behavior\s*:|-moz-binding)/i', $value)) {
+                continue;
+            }
+            $safe[] = $property.': '.$value;
+        }
+
+        return implode('; ', $safe);
+    }
+
     private function folderType(string $folder): string
     {
         $value = strtolower($folder);
@@ -323,23 +390,64 @@ class MailboxService
             $value === 'inbox' => 'inbox',
             str_contains($value, 'sent'), str_contains($value, 'envoy') => 'sent',
             str_contains($value, 'draft'), str_contains($value, 'brouillon') => 'drafts',
+            str_contains($value, 'archive') => 'archive',
             str_contains($value, 'trash'), str_contains($value, 'corbeille') => 'trash',
             str_contains($value, 'spam'), str_contains($value, 'junk') => 'spam',
             default => 'folder',
         };
     }
 
-    private function moveToTrash(mixed $connection, int $uid): bool
+    private function moveToFolderType(mixed $connection, int $uid, string $type, string $fallback): bool
     {
-        $folders = imap_list($connection, $this->server(), '*') ?: [];
-        foreach ($folders as $folder) {
-            $name = substr($folder, strlen($this->server()));
-            $decoded = function_exists('imap_utf7_decode') ? imap_utf7_decode($name) : $name;
-            if ($this->folderType($decoded) === 'trash') {
-                return imap_mail_move($connection, (string) $uid, $name, CP_UID);
+        $folder = $this->findFolderByType($connection, $type) ?? $fallback;
+        if (! $this->folderExists($connection, $folder)) {
+            $mailbox = $this->server().$folder;
+            if (! imap_createmailbox($connection, function_exists('imap_utf7_encode') ? imap_utf7_encode($mailbox) : $mailbox)) {
+                return false;
             }
         }
 
-        return imap_delete($connection, (string) $uid, FT_UID);
+        return imap_mail_move($connection, (string) $uid, $folder, CP_UID);
+    }
+
+    private function findFolderByType(mixed $connection, string $type): ?string
+    {
+        return collect(imap_list($connection, $this->server(), '*') ?: [])
+            ->map(function (string $folder): array {
+                $name = substr($folder, strlen($this->server()));
+                $decoded = function_exists('imap_utf7_decode') ? imap_utf7_decode($name) : $name;
+
+                return ['name' => $name, 'decoded' => $decoded, 'type' => $this->folderType($decoded)];
+            })->where('type', $type)
+            ->sortBy(fn (array $folder) => $this->folderPreference($folder['decoded'], $type))
+            ->value('name');
+    }
+
+    private function folderExists(mixed $connection, string $folder): bool
+    {
+        return collect(imap_list($connection, $this->server(), '*') ?: [])
+            ->contains(fn (string $item) => substr($item, strlen($this->server())) === $folder);
+    }
+
+    private function folderPreference(string $folder, string $type): int
+    {
+        $value = strtolower($folder);
+
+        return match ($type) {
+            'spam' => str_contains($value, 'spam') ? 0 : 1,
+            'sent' => str_contains($value, 'sent') ? 0 : 1,
+            'drafts' => str_contains($value, 'draft') ? 0 : 1,
+            'archive' => str_contains($value, 'archive') ? 0 : 1,
+            'trash' => str_contains($value, 'trash') ? 0 : 1,
+            default => 0,
+        };
+    }
+
+    private function folderOrder(string $type): int
+    {
+        return match ($type) {
+            'inbox' => 0, 'sent' => 1, 'drafts' => 2, 'archive' => 3,
+            'trash' => 4, 'spam' => 5, default => 6,
+        };
     }
 }

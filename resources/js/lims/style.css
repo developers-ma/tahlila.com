@@ -1563,7 +1563,7 @@ tbody tr:hover {
     background: #edf3e8;
 }
 
-input:not([type="checkbox"]):not([type="hidden"]),
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
 select,
 textarea {
     width: 100%;
@@ -1576,7 +1576,7 @@ textarea {
     min-height: 44px;
 }
 
-input:not([type="checkbox"]):disabled,
+input:not([type="checkbox"]):not([type="radio"]):disabled,
 select:disabled,
 textarea:disabled,
 input[readonly] {

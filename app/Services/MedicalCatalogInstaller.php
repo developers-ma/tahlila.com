@@ -1,6 +1,6 @@
 <?php
 namespace App\Services;
-use App\Models\{AnalysisGroup,CatalogInstallation,CatalogInstallationItem,CatalogVersion,Category,CollectionTube,Group,LaboratoryGroup,LaboratoryPrice,LaboratoryTest,MedicalTest,Price,Stock,TestMaterialRequirement};
+use App\Models\{AnalysisGroup,CatalogInstallation,CatalogInstallationItem,CatalogVersion,Category,CollectionTube,Group,LaboratoryGroup,LaboratoryPrice,LaboratoryTest,MedicalTest,PaymentMethod,Price,Stock,TestMaterialRequirement};
 use Illuminate\Support\Facades\DB;
 use Throwable;
 class MedicalCatalogInstaller {
@@ -20,7 +20,7 @@ class MedicalCatalogInstaller {
         return $installation->fresh('items');
     }
     private function item($installation,string $type,int $id): void { CatalogInstallationItem::updateOrCreate(['catalog_installation_id'=>$installation->id,'item_type'=>$type,'item_id'=>$id],['status'=>'installed']); }
-    private function price($model,$amount,string $date,?int $userId): void { LaboratoryPrice::updateOrCreate(['priceable_type'=>$model::class,'priceable_id'=>$model->id,'convention'=>null,'effective_from'=>$date],['amount'=>$amount,'currency'=>'MAD','is_active'=>true,'created_by'=>$userId]); }
+    private function price($model,$amount,string $date,?int $userId): void { LaboratoryPrice::updateOrCreate(['priceable_type'=>$model::class,'priceable_id'=>$model->id,'convention'=>null,'effective_from'=>$date],['amount'=>$amount,'currency'=>PaymentMethod::value('currency') ?: 'MAD','is_active'=>true,'created_by'=>$userId]); }
     private function syncLegacyTest(MedicalTest $test,mixed $amount): void {
         $category=Category::updateOrCreate(['medical_category_id'=>$test->medical_category_id],['category_name'=>$test->category->name]);
         $parameter=$test->parameters->first();

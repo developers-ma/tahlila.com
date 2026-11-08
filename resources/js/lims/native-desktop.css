@@ -1,0 +1,352 @@
+/* Desktop-native visual system. Loaded after the feature styles so every
+   workspace uses one readable type scale and one compact control density. */
+:root {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI Variable",
+        "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.42;
+    letter-spacing: -0.006em;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    --radius: 11px;
+    --native-radius: 8px;
+    --native-control: 36px;
+    --native-shadow: 0 1px 2px rgb(26 45 23 / 5%), 0 6px 18px rgb(26 45 23 / 3%);
+}
+
+body {
+    min-width: 320px;
+    color: #253122;
+    background: #f3f5f1;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.42;
+}
+
+::selection { color: #14210f; background: color-mix(in srgb, var(--lime) 62%, white); }
+
+h1, h2, h3, h4, strong, b { color: #22301f; }
+h1 { margin-bottom: 7px; font-size: 25px; font-weight: 650; line-height: 1.18; letter-spacing: -.025em; }
+h2 { margin-bottom: 8px; font-size: 17px; font-weight: 650; line-height: 1.25; letter-spacing: -.015em; }
+h3 { font-size: 15px; font-weight: 650; line-height: 1.3; }
+p { font-size: 13px; line-height: 1.52; }
+small, .subtle, .muted { font-size: 11.5px; line-height: 1.42; }
+
+button, input, select, textarea { letter-spacing: inherit; }
+button, a { -webkit-user-select: none; user-select: none; }
+input, textarea, [contenteditable="true"] { -webkit-user-select: text; user-select: text; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--green) 68%, white);
+    outline-offset: 2px;
+}
+
+.sidebar {
+    width: 224px;
+    padding: 18px 12px 12px;
+    border-top-width: 3px;
+    box-shadow: 1px 0 0 rgb(0 0 0 / 2%);
+}
+.brand { gap: 8px; min-height: 42px; padding: 0 10px; }
+.brand > svg { width: 23px; height: 23px; }
+.brand b { font-size: 25px; font-weight: 700; letter-spacing: -1.3px; }
+.brand span { margin-top: 4px; font-size: 9.5px; font-weight: 550; letter-spacing: 1.25px; }
+nav { gap: 13px; }
+.nav-section-no-label { padding-top: 15px; }
+.nav-section-label { padding: 0 11px 4px; font-size: 10px; font-weight: 650; letter-spacing: .075em; }
+.nav-section > a, .nav-parent, .sidebar-bottom > a, .sidebar-bottom button {
+    min-height: 36px;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-weight: 500;
+}
+.nav-section > a.active, .sidebar-bottom > a.active { font-weight: 650; }
+.nav-sublist { margin-left: 20px; padding-left: 7px; }
+.nav-sublist a { min-height: 31px; padding: 5px 8px; font-size: 11.5px; }
+.sidebar-bottom { padding-top: 12px; }
+.sidebar-user { margin-top: 5px; padding-top: 10px !important; }
+.sidebar-user strong { font-size: 12px; font-weight: 600; }
+.sidebar-user small { margin-top: 1px; font-size: 10.5px; }
+.sidebar-avatar { width: 28px; height: 28px; flex-basis: 28px; font-size: 10px; }
+
+.workspace-main { margin-left: 224px; }
+.topbar {
+    left: 224px;
+    height: 58px;
+    padding: 0 24px;
+    border-top-width: 3px;
+    background: rgb(255 255 255 / 94%);
+    box-shadow: 0 1px 3px rgb(30 48 27 / 4%);
+    backdrop-filter: blur(14px) saturate(1.2);
+}
+.workspace-main > main { padding-top: 80px; }
+.header-right { gap: 12px; }
+.topbar-new-order {
+    min-height: 34px;
+    gap: 7px;
+    padding: 4px 11px 4px 5px;
+    border-radius: 8px;
+    box-shadow: none;
+    font-size: 12px;
+    font-weight: 650;
+}
+.topbar-new-order-icon { width: 25px; height: 25px; flex-basis: 25px; border-radius: 6px; }
+.notification-button, .avatar, .icon-button { width: 34px; height: 34px; border-radius: 8px; }
+.avatar { font-size: 11px; }
+
+main { max-width: 1680px; padding: 24px 28px 0; }
+.heading { gap: 18px; margin-bottom: 18px; }
+.heading p { font-size: 12.5px; }
+.eyebrow { margin-bottom: 7px; font-size: 10px; font-weight: 650; letter-spacing: .105em; }
+
+.panel, .workflow-card, .balance-card {
+    border-radius: var(--radius);
+    box-shadow: var(--native-shadow);
+}
+.panel { margin-bottom: 16px; }
+.section-heading { padding: 17px 19px; }
+.section-heading p { margin-top: 4px; font-size: 12px; }
+
+.button {
+    min-height: var(--native-control);
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: var(--native-radius);
+    font-size: 12.5px;
+    font-weight: 650;
+    transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+.button:hover { transform: none; box-shadow: 0 1px 3px rgb(30 48 27 / 10%); }
+.table-action {
+    min-height: 31px;
+    gap: 5px;
+    padding: 6px 9px;
+    border-radius: 7px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+.table-action:hover, .table-action:focus-visible, .icon-button:hover, .icon-button:focus-visible { transform: none; }
+
+table { font-size: 12.5px; }
+th {
+    padding: 10px 16px;
+    color: #687363;
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+}
+td { padding: 12px 16px; color: #4e5a49; }
+.patient-cell strong { font-size: 12.5px; }
+.patient-cell small { margin-top: 2px; font-size: 10.5px; }
+.status { padding: 4px 7px; border-radius: 6px; font-size: 11px; font-weight: 550; }
+.row-actions { gap: 5px; font-size: 11.5px; }
+.pagination { padding: 12px 16px; font-size: 11.5px; }
+
+.filters { gap: 8px; padding: 11px 14px; }
+.filters .search, .filter-select { min-height: 38px; border-radius: 8px; box-shadow: none; }
+.filters .search input, .filter-select select { min-height: 36px; font-size: 12px; font-weight: 500; }
+.filters .filter-submit { min-height: 38px; border-radius: 8px; }
+.filter-reset { min-height: 36px; font-size: 11px; }
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea {
+    min-height: 38px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    font-size: 13px;
+    line-height: 1.4;
+    box-shadow: inset 0 1px 1px rgb(20 40 16 / 2%);
+}
+textarea { min-height: 82px; }
+/* One control language across staff, settings, catalogs and resource forms. */
+body .app input[type="checkbox"] {
+    position: relative !important;
+    display: inline-block !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: 22px !important;
+    min-height: 22px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    appearance: none !important;
+    border: 1px solid #bfc9bb !important;
+    border-radius: 999px !important;
+    background: #dfe5dc !important;
+    box-shadow: inset 0 1px 2px rgb(25 48 20 / 8%) !important;
+    vertical-align: middle;
+    cursor: pointer;
+    transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease !important;
+}
+body .app input[type="checkbox"]::after {
+    position: absolute !important;
+    top: 2px !important;
+    left: 2px !important;
+    width: 16px !important;
+    height: 16px !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    box-shadow: 0 1px 3px rgb(18 38 15 / 24%) !important;
+    content: "" !important;
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+    transition: transform 150ms ease !important;
+}
+body .app input[type="checkbox"]:checked {
+    border-color: var(--green) !important;
+    background: var(--green) !important;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 8%) !important;
+}
+body .app input[type="checkbox"]:checked::after { transform: translateX(18px) !important; }
+body .app input[type="checkbox"]:focus-visible,
+body .app input[type="radio"]:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--green) 55%, white) !important;
+    outline-offset: 2px !important;
+}
+body .app input[type="checkbox"]:disabled {
+    border-color: #d2d8cf !important;
+    background: #e9ede7 !important;
+    box-shadow: none !important;
+    cursor: not-allowed;
+    opacity: .7;
+}
+body .app input[type="checkbox"]:disabled::after { background: #f9faf8 !important; box-shadow: none !important; }
+[dir="rtl"] body .app input[type="checkbox"]::after { right: 2px !important; left: auto !important; }
+[dir="rtl"] body .app input[type="checkbox"]:checked::after { transform: translateX(-18px) !important; }
+
+body .app input[type="radio"] {
+    display: inline-grid !important;
+    width: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
+    height: 18px !important;
+    min-height: 18px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    place-items: center;
+    appearance: none !important;
+    border: 1.5px solid #aeb9aa !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    cursor: pointer;
+}
+body .app input[type="radio"]::after {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    content: "";
+    opacity: 0;
+    transform: scale(.4);
+    transition: opacity 130ms ease, transform 130ms ease;
+}
+body .app input[type="radio"]:checked { border-color: var(--green) !important; }
+body .app input[type="radio"]:checked::after { opacity: 1; transform: scale(1); }
+body .app input[type="radio"]:disabled { background: #f1f3ef !important; cursor: not-allowed; opacity: .65; }
+
+/* Search controls already draw their own outer shell. The editable element
+   must remain visually borderless so it never looks like a field inside a field. */
+body .app :is(
+    .search,
+    .mail-search,
+    .chat-search,
+    .patient-picker-search,
+    .staff-search,
+    .catalog-search
+) input:not([type="checkbox"]):not([type="radio"]),
+body .app :is(
+    .search,
+    .mail-search,
+    .chat-search,
+    .patient-picker-search,
+    .staff-search,
+    .catalog-search
+) input:not([type="checkbox"]):not([type="radio"]):focus,
+body .app :is(
+    .search,
+    .mail-search,
+    .chat-search,
+    .patient-picker-search,
+    .staff-search,
+    .catalog-search
+) input:not([type="checkbox"]):not([type="radio"]):focus-visible {
+    border: 0 !important;
+    outline: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Text entry stays visually stable while typing: no extra active ring or
+   second focus border. Buttons, links, checkboxes and radios keep their
+   keyboard focus treatment. */
+body .app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+body .app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus-visible,
+body .app textarea:focus,
+body .app textarea:focus-visible {
+    outline: 0 !important;
+    box-shadow: none !important;
+}
+
+body .app :is(
+    .search,
+    .mail-search,
+    .chat-search,
+    .patient-picker-search,
+    .staff-search,
+    .catalog-search
+):focus-within {
+    border-color: var(--line) !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+}
+.field > label, .field > span:first-child, .choice > span, .form-grid label > span:first-child {
+    font-size: 12px;
+    font-weight: 600;
+}
+.field-help, .error-text { font-size: 11px; line-height: 1.4; }
+.form-grid { gap: 14px 16px; }
+.form-panel { box-shadow: var(--native-shadow); }
+.form-footer { padding-top: 16px; }
+
+.tabs { gap: 3px; padding: 3px; border-radius: 8px; }
+.tabs a, .tabs button { min-height: 32px; padding: 6px 11px; border-radius: 6px; font-size: 12px; font-weight: 550; }
+.notice { border-radius: 8px; font-size: 12.5px; }
+
+.quick-actions { gap: 10px; margin-bottom: 20px; }
+.quick-actions a { gap: 11px; padding: 14px; border-radius: 9px; }
+.quick-actions strong { font-size: 12.5px; }
+.quick-actions small { margin-top: 3px; font-size: 11px; }
+.workflow-counts strong { font-size: 30px; font-weight: 600; }
+.large-number { font-size: 46px; }
+.catalog-panel { padding: 21px; }
+.catalog-head h2 { font-size: 21px; }
+.catalog-head span { font-size: 10.5px; font-weight: 700; }
+.catalog-progress button, .catalog-actions button, .catalog-footer button { font-size: 12px; }
+.dashboard-performance strong { color: #fff; }
+.dashboard-performance small { color: rgb(255 255 255 / 78%); }
+
+@media (min-width: 1200px) {
+    body { overflow: hidden; }
+    .sidebar, .workspace-main { height: 100vh; }
+    .workspace-main { overflow: auto; }
+}
+
+@media (max-width: 1050px) {
+    body { overflow: auto; }
+}
+
+@media (max-width: 900px) {
+    .sidebar { width: min(286px, 86vw); }
+    .workspace-main { margin-left: 0; }
+    .topbar { left: 0; height: 58px; padding: 0 14px; }
+    .workspace-main > main { padding-top: 75px; }
+    main { padding: 18px 14px 0; }
+}
+
+@media print {
+    body { font-size: initial; line-height: initial; background: #fff; }
+    .document, .print-document { box-shadow: none; }
+}
