@@ -10,6 +10,7 @@ export default defineConfig({
                 "resources/css/app.css",
                 "resources/js/app.js",
                 "resources/js/lims/main.jsx",
+                "resources/js/installer/main.jsx",
             ],
             refresh: true,
         }),

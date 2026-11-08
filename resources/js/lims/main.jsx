@@ -26,6 +26,7 @@ import { StaffForm, StaffPage } from "./Staff";
 import { PatientPortal } from "./PatientPortal";
 import { Mailbox } from "./Mailbox";
 import { Chat } from "./Chat";
+import { MedicalCatalog } from "./MedicalCatalog";
 function applyPageAppearance() {
     document.documentElement.dir = p.locale === "ar" ? "rtl" : "ltr";
     document.documentElement.dataset.theme =
@@ -82,6 +83,8 @@ function Content() {
             return <BarcodePage />;
         case "settings":
             return <SettingsPage />;
+        case "medical-catalog":
+            return <MedicalCatalog />;
         case "profile":
             return <Profile />;
         case "languages":

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\LimsPageController;
+use App\Http\Controllers\MedicalCatalogController;
 use Illuminate\Support\Facades\Route;
 
 $protectedPages = [
@@ -38,6 +39,7 @@ $protectedPages = [
     '/setting/email' => ['setting.email', 'settings.email', 'settings.manage'],
     '/setting/colors' => ['setting.colors', 'settings.colors.index', 'settings.manage'],
     '/setting/patient-portal' => ['setting.patient-portal', 'settings.patient-portal', 'settings.manage'],
+    '/setting/medical-catalog' => ['medical-catalog', 'settings.medical-catalog', 'catalog.manage'],
     '/setting/license' => ['setting.license', 'settings.license', 'settings.manage'],
 ];
 
@@ -89,6 +91,8 @@ $registerPages = function (array $pages, string|array $action, bool $named = tru
 
 Route::middleware(['auth', 'verified'])->group(function () use ($registerPages, $protectedPages) {
     $registerPages($protectedPages, LimsPageController::class);
+    Route::get('/api/medical-catalog', [MedicalCatalogController::class, 'data'])->middleware('permission:catalog.manage');
+    Route::post('/api/medical-catalog/install', [MedicalCatalogController::class, 'install'])->middleware('permission:catalog.manage');
     Route::get('/print/result', fn () => redirect('/results'))->middleware('permission:results.manage')->name('results.print');
 });
 

@@ -8,6 +8,7 @@ use App\Http\Controllers\EmailController;
 use App\Http\Controllers\EmailSettingController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InstallationController;
 use App\Http\Controllers\LaboratorySettingController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\PatientController;
@@ -26,6 +27,15 @@ use Illuminate\Support\Facades\Route;
 Route::get('/csrf-token', fn () => response()->json([
     'token' => csrf_token(),
 ]))->name('csrf.token');
+
+Route::get('/install/account', [InstallationController::class, 'account'])->name('install.account');
+Route::post('/install/account', [InstallationController::class, 'createAccount'])->middleware('throttle:5,1');
+Route::middleware('auth')->group(function () {
+    Route::get('/install/setup', [InstallationController::class, 'setup'])->name('install.setup');
+    Route::post('/install/laboratory', [InstallationController::class, 'saveLaboratory']);
+    Route::post('/install/preferences', [InstallationController::class, 'savePreferences']);
+    Route::post('/install/complete', [InstallationController::class, 'complete']);
+});
 
 Route::get('/session/keep-alive', function (Request $request) {
     $request->session()->put('_last_keep_alive', now()->timestamp);

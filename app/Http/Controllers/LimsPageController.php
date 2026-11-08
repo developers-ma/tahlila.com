@@ -36,6 +36,7 @@ class LimsPageController extends Controller
 
     public function __invoke(Request $request)
     {
+        if (! app()->environment('testing') && (string) $request->route('screen') === 'auth.login' && ! User::exists()) return redirect()->route('install.account');
         $page = $this->data(
             $request,
             (string) $request->route('screen'),
@@ -234,6 +235,8 @@ class LimsPageController extends Controller
             }
         } elseif ($screen === 'settings') {
             $page['title'] = 'Votre laboratoire, à votre manière.';
+        } elseif ($screen === 'medical-catalog') {
+            $page['title'] = 'Catalogue des analyses';
         } elseif (str_starts_with($screen, 'setting.')) {
             $section = substr($screen, 8);
             $page['kind'] = 'form';

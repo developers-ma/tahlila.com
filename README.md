@@ -98,6 +98,31 @@ php artisan view:cache
 
 Copiez également `public/build` sur le serveur. Node n’a pas à y rester installé. Configurez `APP_ENV=production`, `APP_DEBUG=false`, l’URL HTTPS et les cookies sécurisés. Le compte PHP doit pouvoir écrire dans `storage` et `bootstrap/cache`. La modification des traductions requiert aussi un accès en écriture aux fichiers `lang/*.json`.
 
+## Publication des applications Desktop
+
+`tahlila-app/` reste l’unique source de vérité pour Laravel et React. Ne copiez pas manuellement les fichiers Laravel ou React dans `desktop/` : les répertoires `desktop/build/`, `desktop/resources/server/` et `desktop/installers/` sont générés.
+
+Après une modification du backend, des routes, des migrations, du React, du CSS ou des assets, travaillez normalement dans ce projet :
+
+```sh
+npm run build
+php artisan test
+```
+
+Pour publier une nouvelle version Desktop, lancez le script depuis le dossier Desktop :
+
+```sh
+cd ../desktop
+npm test
+npm run release
+```
+
+Le processus lit `../tahlila-app`, compile React, crée une copie Laravel de production propre, installe uniquement les dépendances Composer de production et produit les applications Server et Client. Il ne remplace pas votre `.env`, votre base SQLite, votre dossier `storage` ni votre code source de développement.
+
+La base SQLite de l’application Server installée est conservée dans le dossier de données utilisateur du système, en dehors du répertoire d’installation. Les mises à jour Desktop ne doivent donc pas supprimer ou remplacer les données du laboratoire. Faites toujours une sauvegarde avant une migration ou une mise à jour.
+
+Les installateurs Windows doivent être construits sur Windows. Les DMG macOS doivent être construits sur macOS ; la signature et la notarisation sont nécessaires avant distribution publique.
+
 ## Limites héritées, rendues explicites
 
 - La page Équipe permet aux administrateurs de créer les comptes, choisir un rôle et ajouter des permissions individuelles. Les pages React, l’API JSON et les actions Laravel utilisent le même registre central `config/lims_permissions.php` et le même middleware d’autorisation.

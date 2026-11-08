@@ -86,5 +86,7 @@ class DatabaseSeeder extends Seeder
                 Stock::updateOrCreate(['product_name' => $item['product_name']], $item);
             }
         });
+
+        $this->call(MedicalCatalogSeeder::class);
     }
 }

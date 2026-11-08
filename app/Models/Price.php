@@ -10,7 +10,7 @@ class Price extends Model
 {
     use HasFactory;
     
-    protected $fillable = ['test_name','test_description','test_unit', 'test_reference_value','test_unit_2','test_reference_value_2','test_required_age','test_required_weight','test_required_height','test_requiring_conclusion','price'];
+    protected $fillable = ['medical_test_id','test_name','test_description','test_unit', 'test_reference_value','test_unit_2','test_reference_value_2','test_required_age','test_required_weight','test_required_height','test_requiring_conclusion','price'];
 
     // Define the relationship with Category
     public function categories()

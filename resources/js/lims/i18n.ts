@@ -13,5 +13,8 @@ export function t(value: string): string {
             key
         );
     }
-    return key;
+    // Every installed locale can override the canonical English key. Missing
+    // entries deliberately fall back to English instead of leaking the French
+    // source label into another language.
+    return p.dictionary?.[key] ?? key;
 }

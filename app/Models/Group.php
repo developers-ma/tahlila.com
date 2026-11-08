@@ -9,6 +9,6 @@ class Group extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'group_name',
+        'group_name', 'analysis_group_id',
     ];
 }

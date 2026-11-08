@@ -20,7 +20,7 @@ class ChatAttachment extends Model
 
     public function getUrlAttribute(): string
     {
-        return route('chat.attachments.download', $this);
+        return route('chat.attachments.download', $this, false);
     }
 
     public function getIsImageAttribute(): bool

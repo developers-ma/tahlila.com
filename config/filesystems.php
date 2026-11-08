@@ -39,7 +39,10 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            // Keep browser-facing uploads on the current origin. Absolute URLs
+            // tied to APP_URL break when the same installation is reached from
+            // another domain, HTTPS proxy, LAN address, or desktop wrapper.
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
         ],

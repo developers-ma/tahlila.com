@@ -26,11 +26,19 @@ import {
     UserRound,
     Users,
     Wrench,
+    FlaskConical,
 } from "lucide-react";
 import { csrfFetch, p } from "./data";
 import { Button, Heading, Form, Field } from "./components";
 
 const settingsItems = [
+    {
+        title: "Catalogue des analyses",
+        short: "Catalogue médical",
+        description: "Analyses, groupes, paramètres et tarifs.",
+        href: "/setting/medical-catalog",
+        icon: FlaskConical,
+    },
     {
         title: "Identité du laboratoire",
         short: "Laboratoire",
