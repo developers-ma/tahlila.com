@@ -749,9 +749,14 @@
     }
     .mail-folders {
         display: flex;
+        flex-direction: row;
         align-items: center;
         gap: 8px;
         overflow-x: auto;
+        min-height: 68px;
+        padding: 10px 12px;
+        scrollbar-width: thin;
+        scroll-snap-type: x proximity;
         border-right: 0;
         border-bottom: 1px solid var(--line);
     }
@@ -761,9 +766,30 @@
     }
     .mail-folders nav {
         display: flex;
+        flex-direction: row;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
     }
     .mail-folders nav a {
-        flex: 0 0 38px;
+        display: grid;
+        width: 44px;
+        min-width: 44px;
+        height: 44px;
+        min-height: 44px;
+        flex: 0 0 44px;
+        place-items: center;
+        padding: 0;
+        scroll-snap-align: start;
+    }
+    .mail-folders nav a svg {
+        width: 19px;
+        height: 19px;
+        flex: 0 0 auto;
+    }
+    [dir="rtl"] .mail-folders {
+        direction: rtl;
     }
     .mail-list {
         border-right: 0;

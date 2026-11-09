@@ -198,13 +198,13 @@ export function Layout({ children }) {
                             href="/settings"
                             className={
                                 p.path === "/settings" ||
-                                p.path.startsWith("/setting/")
+                                    p.path.startsWith("/setting/")
                                     ? "active"
                                     : ""
                             }
                             aria-current={
                                 p.path === "/settings" ||
-                                p.path.startsWith("/setting/")
+                                    p.path.startsWith("/setting/")
                                     ? "page"
                                     : undefined
                             }
@@ -249,10 +249,11 @@ export function Layout({ children }) {
                         <strong>tahlila</strong>
                     </a>
                     <div className="header-right">
-                        {can("orders.manage") && (
+                        {can("orders.manage") && p.path !== "/patients" && (
                             <a className="topbar-new-order" href="/new-test">
                                 <span className="topbar-new-order-icon">
-                                    <Plus size={16} />
+                                    <FlaskConical size={16} />
+                                    <Plus className="topbar-new-order-plus" size={10} />
                                 </span>
                                 <span>{t("Nouvelle analyse")}</span>
                             </a>
@@ -314,11 +315,9 @@ export function Layout({ children }) {
                     {children}
                     <footer>
                         <span className="footer-product">
-                            TAHLILA{" "}
+                            {" "}
                             <span>
-                                {t(
-                                    "Un laboratoire organis\xE9. Des soins qui avancent.",
-                                )}
+
                             </span>
                         </span>
                         <span className="footer-copyright">

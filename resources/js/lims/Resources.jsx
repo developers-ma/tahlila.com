@@ -179,7 +179,10 @@ export function ListPage() {
     return (
         <>
             <Heading>
-                {can("orders.manage") && (
+                {can("orders.manage") &&
+                    !["sample-collection", "results", "invoices"].includes(
+                        p.screen,
+                    ) && (
                     <Button href="/new-test">
                         <Plus size={18} />
                         {t("Nouvelle analyse")}

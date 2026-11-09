@@ -154,7 +154,7 @@ export function StaffPage() {
                                             className={
                                                 "staff-access " +
                                                 (user.role?.slug ===
-                                                "administrator"
+                                                    "administrator"
                                                     ? "full"
                                                     : "")
                                             }
@@ -163,9 +163,9 @@ export function StaffPage() {
                                             {user.role?.slug === "administrator"
                                                 ? t("Accès complet")
                                                 : (user.permissions?.length ||
-                                                      0) +
-                                                  " " +
-                                                  t("accès")}
+                                                    0) +
+                                                " " +
+                                                t("accès")}
                                         </span>
                                     </td>
                                     <td>{date(user.created_at)}</td>
@@ -219,14 +219,21 @@ export function StaffPage() {
 
 export function StaffForm() {
     const isEditing = Boolean(p.record?.id);
+    const suggestedRole =
+        p.roles.find((item) => item.slug === "laboratory") || p.roles[0];
     const defaultRoleId = String(
         p.old?._submitted
             ? p.old.role_id || ""
-            : p.record?.role_id || p.roles[0]?.id || "",
+            : p.record?.role_id || suggestedRole?.id || "",
+    );
+    const defaultRole = p.roles.find(
+        (item) => String(item.id) === defaultRoleId,
     );
     const defaultPermissions = p.old?._submitted
         ? Array.from(p.old.permissions || []).map(String)
-        : Array.from(p.record?.permissions || []);
+        : isEditing
+          ? Array.from(p.record?.permissions || [])
+          : Array.from(defaultRole?.permissions || []);
     const [roleId, setRoleId] = useState(defaultRoleId);
     const [selectedPermissions, setSelectedPermissions] =
         useState(defaultPermissions);
@@ -290,6 +297,7 @@ export function StaffForm() {
                                     field={{
                                         name: "name",
                                         label: "Nom complet",
+                                        placeholder: "Nom et prénom du collaborateur",
                                         required: true,
                                         autoComplete: "name",
                                     }}
@@ -300,6 +308,7 @@ export function StaffForm() {
                                         name: "email",
                                         label: "Adresse e-mail",
                                         type: "email",
+                                        placeholder: "collaborateur@laboratoire.com",
                                         required: true,
                                         autoComplete: "email",
                                     }}
@@ -371,13 +380,12 @@ export function StaffForm() {
                                         />
                                         <span>
                                             <strong>{t(item.name)}</strong>
-                                            <small>{t(item.description)}</small>
                                             <em>
                                                 {item.slug === "administrator"
                                                     ? t("Accès complet")
                                                     : item.permissions.length +
-                                                      " " +
-                                                      t("accès suggérés")}
+                                                    " " +
+                                                    t("accès suggérés")}
                                             </em>
                                         </span>
                                         <ShieldCheck size={19} />
@@ -404,11 +412,11 @@ export function StaffForm() {
                                     <p>
                                         {administrator
                                             ? t(
-                                                  "L’administrateur possède automatiquement tous les accès.",
-                                              )
+                                                "L’administrateur possède automatiquement tous les accès.",
+                                            )
                                             : t(
-                                                  "Sélectionnez exactement les pages et actions accessibles à ce collaborateur.",
-                                              )}
+                                                "Sélectionnez exactement les pages et actions accessibles à ce collaborateur.",
+                                            )}
                                     </p>
                                 </div>
                             </div>
@@ -527,13 +535,13 @@ export function StaffForm() {
                                                             <small>
                                                                 {administrator
                                                                     ? t(
-                                                                          "Accordée automatiquement",
-                                                                      )
+                                                                        "Accordée automatiquement",
+                                                                    )
                                                                     : suggested
-                                                                      ? t(
+                                                                        ? t(
                                                                             "Suggérée par le rôle",
                                                                         )
-                                                                      : t(
+                                                                        : t(
                                                                             "Permission optionnelle",
                                                                         )}
                                                             </small>

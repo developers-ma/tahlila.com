@@ -32,8 +32,8 @@ export function Dashboard() {
                     </div>
                     <OrderTable mode="dashboard" />
                 </section>
-                <a className="dashboard-performance" href="/results">
-                    <span><strong>{t("Performance du laboratoire")}</strong><small>{t("Suivre les résultats")}</small></span>
+                <a className="dashboard-performance" href="/sample-collection">
+                    <span><strong>{t("Collecter les prélèvements")}</strong><small>{t("Voir")}</small></span>
                     <i><ArrowRight /></i>
                 </a>
             </section>

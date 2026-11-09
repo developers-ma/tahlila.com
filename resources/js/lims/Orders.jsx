@@ -263,9 +263,9 @@ export function OrderForm() {
                                 <div className="search">
                                     <Search size={18} />
                                     <input
-                                        aria-label="Rechercher une analyse"
+                                        aria-label={t("Rechercher une analyse")}
                                         type="search"
-                                        placeholder="Rechercher une analyse…"
+                                        placeholder={t("Rechercher une analyse…")}
                                         value={search}
                                         onChange={(e) =>
                                             setSearch(e.target.value)
@@ -415,6 +415,7 @@ export function OrderForm() {
                                 min="0"
                                 step="0.01"
                                 required
+                                placeholder="0,00"
                                 value={paid}
                                 onChange={(e) => setPaid(e.target.value)}
                             />

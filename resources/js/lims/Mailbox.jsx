@@ -696,6 +696,7 @@ export function Mailbox() {
                                 name="to"
                                 type="text"
                                 required
+                                placeholder={t("Adresse du destinataire")}
                                 value={draft.to}
                                 onChange={(event) =>
                                     setDraft({
@@ -717,6 +718,7 @@ export function Mailbox() {
                                     <label>Cc</label>
                                     <input
                                         name="cc"
+                                        placeholder={t("Adresse en copie")}
                                         value={draft.cc}
                                         onChange={(event) =>
                                             setDraft({
@@ -730,6 +732,7 @@ export function Mailbox() {
                                     <label>Cci</label>
                                     <input
                                         name="bcc"
+                                        placeholder={t("Adresse en copie cachée")}
                                         value={draft.bcc}
                                         onChange={(event) =>
                                             setDraft({

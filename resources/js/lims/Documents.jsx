@@ -776,6 +776,7 @@ export function Invoice() {
                                 max={total}
                                 step="0.01"
                                 required
+                                placeholder="0,00"
                                 value={balance}
                                 onChange={(event) =>
                                     setBalance(event.target.value)
@@ -985,8 +986,8 @@ export function Report() {
                                 <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="patient@example.com" />
                                 <small className="field-help">{p.record.patient?.email ? t("L’adresse du patient est préremplie.") : t("Vous pouvez saisir une autre adresse.")}</small>
                             </label>
-                            <label className="field">{t("Objet")}<input required value={subject} onChange={(event) => setSubject(event.target.value)} /></label>
-                            <label className="field">{t("Message")}<textarea required rows="6" value={message} onChange={(event) => setMessage(event.target.value)} /></label>
+                            <label className="field">{t("Objet")}<input required value={subject} placeholder={t("Saisissez l’objet…")} onChange={(event) => setSubject(event.target.value)} /></label>
+                            <label className="field">{t("Message")}<textarea required rows="6" value={message} placeholder={t("Saisissez votre message…")} onChange={(event) => setMessage(event.target.value)} /></label>
                             <p className="report-email-attachment"><FileText size={16} /> {t("Le rapport PDF sera joint automatiquement.")}</p>
                             {emailNotice && <p className="alert-inline success" role="status">{emailNotice}</p>}
                             <div className="confirm-dialog-actions">

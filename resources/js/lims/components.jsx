@@ -294,11 +294,28 @@ export function Field({ field, record = {}, useOld = true }) {
         useOld && p.old?._submitted
             ? (p.old[name] ?? "")
             : (record?.[name] ?? "");
+    const defaultPlaceholder =
+        type === "password"
+            ? "Saisissez le mot de passe…"
+            : type === "email"
+              ? "nom@laboratoire.com"
+              : type === "tel"
+                ? "+212 6 00 00 00 00"
+                : type === "number"
+                  ? "0"
+                  : type === "textarea"
+                    ? "Saisissez les informations…"
+                    : type === "text"
+                      ? "Saisissez une valeur…"
+                      : undefined;
     const common = {
         id: fieldId,
         name,
         required,
-        placeholder,
+        placeholder:
+            placeholder === ""
+                ? ""
+                : t(placeholder || defaultPlaceholder || ""),
         autoComplete,
         inputMode,
         min,
@@ -411,7 +428,7 @@ export function Field({ field, record = {}, useOld = true }) {
             )}
             {help && (
                 <small id={`${fieldId}-help`} className="field-help">
-                    {help}
+                    {t(help)}
                 </small>
             )}
             {p.errors[name] && (

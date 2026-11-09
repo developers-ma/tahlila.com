@@ -484,6 +484,7 @@ function ColorField({ field, value, onChange }) {
                     required
                     spellCheck="false"
                     pattern="#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?"
+                    placeholder="#2B7232"
                     onChange={(event) => onChange(event.target.value)}
                 />
             </div>
@@ -629,195 +630,195 @@ export function SettingsForm() {
                 />
             )}
             {(section !== "email" || emailManual) && (
-            <Form
-                action={p.action}
-                method={p.method}
-                className="settings-form"
-                formRef={formRef}
-            >
-                <div className="settings-sections">
-                    {config.groups.map((group) => (
-                        <SettingsSection
-                            key={group.title}
-                            icon={group.icon}
-                            title={group.title}
-                            description={group.description}
-                        >
-                            <div
-                                className={`settings-fields ${group.layout || ""}`}
+                <Form
+                    action={p.action}
+                    method={p.method}
+                    className="settings-form"
+                    formRef={formRef}
+                >
+                    <div className="settings-sections">
+                        {config.groups.map((group) => (
+                            <SettingsSection
+                                key={group.title}
+                                icon={group.icon}
+                                title={group.title}
+                                description={group.description}
                             >
-                                {section === "colors" && group.title === "Palette de l’interface" && (
-                                    <PaletteSelector
-                                        colors={colors}
-                                        onSelect={(palette) =>
-                                            setColors((current) => ({ ...current, ...palette }))
-                                        }
-                                    />
-                                )}
-                                {group.fields.map((name) => {
-                                    const field = fields[name];
-                                    if (!field) return null;
-                                    return field.type === "color" ? (
-                                        <ColorField
-                                            key={name}
-                                            field={field}
-                                            value={colors[name]}
-                                            onChange={(value) =>
-                                                setColors((current) => ({
-                                                    ...current,
-                                                    [name]: value,
-                                                }))
-                                            }
-                                        />
-                                    ) : (
-                                        <Field
-                                            key={name}
-                                            field={enhancedField(field, record)}
-                                            record={record}
-                                        />
-                                    );
-                                })}
-                            </div>
-                            {section === "laboratory" &&
-                                group.fields.includes("logo") &&
-                                (record.logo_url || record.logo) && (
-                                    <div className="current-logo">
-                                        <img
-                                            src={
-                                                record.logo_url ||
-                                                `/storage/${record.logo}`
-                                            }
-                                            alt="Logo actuel du laboratoire"
-                                        />
-                                        <div>
-                                            <strong>
-                                                Logo actuellement utilisé
-                                            </strong>
-                                            <small>
-                                                Choisissez un nouveau fichier
-                                                uniquement pour le remplacer.
-                                            </small>
-                                        </div>
-                                    </div>
-                                )}
-                            {section === "colors" &&
-                                group.title === "Palette de l’interface" && (
-                                    <PalettePreview colors={colors} />
-                                )}
-                            {section === "patient-portal" && (
-                                <div className="portal-settings-summary">
-                                    <div>
-                                        <span>Patients avec e-mail</span>
-                                        <strong>
-                                            {p.portalStats.patientsWithEmail}
-                                        </strong>
-                                    </div>
-                                    <div>
-                                        <span>Comptes synchronisés</span>
-                                        <strong>
-                                            {p.portalStats.accounts}
-                                        </strong>
-                                    </div>
-                                    <div>
-                                        <span>Accès initialisés</span>
-                                        <strong>
-                                            {p.portalStats.activated}
-                                        </strong>
-                                    </div>
-                                    {record.patient_portal_enabled && (
-                                        <a
-                                            href="/patient/login"
-                                            target="_blank"
-                                            rel="noreferrer"
-                                        >
-                                            Ouvrir l’espace patient
-                                            <ArrowUpRight size={15} />
-                                        </a>
-                                    )}
-                                </div>
-                            )}
-                        </SettingsSection>
-                    ))}
-                </div>
-                <div className="settings-savebar">
-                    <div>
-                        <CheckCircle2 size={18} />
-                        <span>
-                            Vérifiez les informations avant l’enregistrement.
-                        </span>
-                    </div>
-                    <div className="settings-save-actions">
-                        {section === "colors" && (
-                            <Button
-                                type="submit"
-                                secondary
-                                data-reset-colors="true"
-                                formAction="/setting/colors/reset"
-                                formNoValidate
-                                onClick={(event) => {
-                                    event.preventDefault();
-                                    setResetConfirmOpen(true);
-                                }}
-                            >
-                                <RotateCcw size={16} />
-                                {t("Réinitialiser les couleurs")}
-                            </Button>
-                        )}
-                        <Button type="submit">
-                            {t("Enregistrer les modifications")}
-                            <ArrowRight size={17} />
-                        </Button>
-                    </div>
-                </div>
-                {section === "colors" && resetConfirmOpen && (
-                    <div
-                        className="confirm-backdrop"
-                        role="presentation"
-                        onMouseDown={(event) => {
-                            if (event.target === event.currentTarget) {
-                                setResetConfirmOpen(false);
-                            }
-                        }}
-                    >
-                        <section
-                            className="confirm-dialog"
-                            role="dialog"
-                            aria-modal="true"
-                            aria-labelledby="reset-colors-title"
-                        >
-                            <div className="confirm-dialog-icon">
-                                <RotateCcw size={22} />
-                            </div>
-                            <div>
-                                <h2 id="reset-colors-title">
-                                    {t("Restaurer les couleurs par défaut ?")}
-                                </h2>
-                                <p>
-                                    {t(
-                                        "La palette actuelle sera remplacée par les couleurs recommandées de Tahlila.",
-                                    )}
-                                </p>
-                            </div>
-                            <div className="confirm-dialog-actions">
-                                <Button
-                                    type="button"
-                                    secondary
-                                    onClick={() => setResetConfirmOpen(false)}
+                                <div
+                                    className={`settings-fields ${group.layout || ""}`}
                                 >
-                                    {t("Annuler")}
-                                </Button>
+                                    {section === "colors" && group.title === "Palette de l’interface" && (
+                                        <PaletteSelector
+                                            colors={colors}
+                                            onSelect={(palette) =>
+                                                setColors((current) => ({ ...current, ...palette }))
+                                            }
+                                        />
+                                    )}
+                                    {group.fields.map((name) => {
+                                        const field = fields[name];
+                                        if (!field) return null;
+                                        return field.type === "color" ? (
+                                            <ColorField
+                                                key={name}
+                                                field={field}
+                                                value={colors[name]}
+                                                onChange={(value) =>
+                                                    setColors((current) => ({
+                                                        ...current,
+                                                        [name]: value,
+                                                    }))
+                                                }
+                                            />
+                                        ) : (
+                                            <Field
+                                                key={name}
+                                                field={enhancedField(field, record)}
+                                                record={record}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                                {section === "laboratory" &&
+                                    group.fields.includes("logo") &&
+                                    (record.logo_url || record.logo) && (
+                                        <div className="current-logo">
+                                            <img
+                                                src={
+                                                    record.logo_url ||
+                                                    `/storage/${record.logo}`
+                                                }
+                                                alt="Logo actuel du laboratoire"
+                                            />
+                                            <div>
+                                                <strong>
+                                                    Logo actuellement utilisé
+                                                </strong>
+                                                <small>
+                                                    Choisissez un nouveau fichier
+                                                    uniquement pour le remplacer.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    )}
+                                {section === "colors" &&
+                                    group.title === "Palette de l’interface" && (
+                                        <PalettePreview colors={colors} />
+                                    )}
+                                {section === "patient-portal" && (
+                                    <div className="portal-settings-summary">
+                                        <div>
+                                            <span>Patients avec e-mail</span>
+                                            <strong>
+                                                {p.portalStats.patientsWithEmail}
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <span>Comptes synchronisés</span>
+                                            <strong>
+                                                {p.portalStats.accounts}
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <span>Accès initialisés</span>
+                                            <strong>
+                                                {p.portalStats.activated}
+                                            </strong>
+                                        </div>
+                                        {record.patient_portal_enabled && (
+                                            <a
+                                                href="/patient/login"
+                                                target="_blank"
+                                                rel="noreferrer"
+                                            >
+                                                Ouvrir l’espace patient
+                                                <ArrowUpRight size={15} />
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
+                            </SettingsSection>
+                        ))}
+                    </div>
+                    <div className="settings-savebar">
+                        <div>
+                            <CheckCircle2 size={18} />
+                            <span>
+                                Vérifiez les informations avant l’enregistrement.
+                            </span>
+                        </div>
+                        <div className="settings-save-actions">
+                            {section === "colors" && (
                                 <Button
-                                    type="button"
-                                    onClick={confirmColorReset}
+                                    type="submit"
+                                    secondary
+                                    data-reset-colors="true"
+                                    formAction="/setting/colors/reset"
+                                    formNoValidate
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        setResetConfirmOpen(true);
+                                    }}
                                 >
                                     <RotateCcw size={16} />
-                                    {t("Restaurer")}
+                                    {t("Réinitialiser les couleurs")}
                                 </Button>
-                            </div>
-                        </section>
+                            )}
+                            <Button type="submit">
+                                {t("Enregistrer les modifications")}
+                                <ArrowRight size={17} />
+                            </Button>
+                        </div>
                     </div>
-                )}
-            </Form>
+                    {section === "colors" && resetConfirmOpen && (
+                        <div
+                            className="confirm-backdrop"
+                            role="presentation"
+                            onMouseDown={(event) => {
+                                if (event.target === event.currentTarget) {
+                                    setResetConfirmOpen(false);
+                                }
+                            }}
+                        >
+                            <section
+                                className="confirm-dialog"
+                                role="dialog"
+                                aria-modal="true"
+                                aria-labelledby="reset-colors-title"
+                            >
+                                <div className="confirm-dialog-icon">
+                                    <RotateCcw size={22} />
+                                </div>
+                                <div>
+                                    <h2 id="reset-colors-title">
+                                        {t("Restaurer les couleurs par défaut ?")}
+                                    </h2>
+                                    <p>
+                                        {t(
+                                            "La palette actuelle sera remplacée par les couleurs recommandées de Tahlila.",
+                                        )}
+                                    </p>
+                                </div>
+                                <div className="confirm-dialog-actions">
+                                    <Button
+                                        type="button"
+                                        secondary
+                                        onClick={() => setResetConfirmOpen(false)}
+                                    >
+                                        {t("Annuler")}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        onClick={confirmColorReset}
+                                    >
+                                        <RotateCcw size={16} />
+                                        {t("Restaurer")}
+                                    </Button>
+                                </div>
+                            </section>
+                        </div>
+                    )}
+                </Form>
             )}
         </SettingsShell>
     );
@@ -1115,8 +1116,8 @@ export function Languages() {
                         <Search size={17} />
                         <input
                             type="search"
-                            aria-label="Rechercher une langue"
-                            placeholder="Rechercher une langue…"
+                            aria-label={t("Rechercher une langue")}
+                            placeholder={t("Rechercher une langue…")}
                             value={query}
                             onChange={(event) => setQuery(event.target.value)}
                         />
@@ -1261,8 +1262,8 @@ export function LanguageEditor() {
                             <Search size={17} />
                             <input
                                 type="search"
-                                aria-label="Rechercher une traduction"
-                                placeholder="Rechercher une clé ou une traduction…"
+                                aria-label={t("Rechercher une traduction")}
+                                placeholder={t("Rechercher une clé ou une traduction…")}
                                 value={query}
                                 onChange={(event) =>
                                     setQuery(event.target.value)
@@ -1284,6 +1285,7 @@ export function LanguageEditor() {
                                 <input
                                     name={`translations[${key}]`}
                                     defaultValue={value}
+                                    placeholder={t("Traduction…")}
                                 />
                             </label>
                         ))}
@@ -1324,9 +1326,7 @@ export function SettingsInfo() {
                             <PackageCheck />
                         </div>
                         <div className="update-hero-copy">
-                            <span className="status status-3">
-                                <i /> {t("Système opérationnel")}
-                            </span>
+
                             <h2>{t("Votre installation est à jour")}</h2>
                             <p>{t("La maintenance est gérée de manière sécurisée par votre administrateur.")}</p>
                         </div>
@@ -1336,23 +1336,6 @@ export function SettingsInfo() {
                         </div>
                     </section>
 
-                    <div className="update-metrics">
-                        <article className="panel update-metric">
-                            <Server />
-                            <span>{t("Application")}</span>
-                            <strong>v{info.applicationVersion || "1.0.0"}</strong>
-                        </article>
-                        <article className="panel update-metric">
-                            <ShieldCheck />
-                            <span>Laravel</span>
-                            <strong>v{info.frameworkVersion || "—"}</strong>
-                        </article>
-                        <article className="panel update-metric">
-                            <Wrench />
-                            <span>PHP</span>
-                            <strong>v{info.phpVersion || "—"}</strong>
-                        </article>
-                    </div>
 
                     <div className="update-grid">
                         <section className="panel update-panel">

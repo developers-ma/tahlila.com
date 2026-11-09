@@ -7,6 +7,7 @@ import {
     Pencil,
     Plus,
     ShieldCheck,
+    UserPlus,
 } from "lucide-react";
 import { checked, p, money, date } from "./data";
 import {
@@ -29,8 +30,14 @@ export function ResourceList() {
         <>
             <Heading>
                 <Button href={`/${p.base}/create`}>
-                    <Plus size={18} />
-                    {t("Ajouter")}
+                    {p.resource === "patients" ? (
+                        <UserPlus size={18} />
+                    ) : (
+                        <Plus size={18} />
+                    )}
+                    {p.resource === "patients"
+                        ? t("Ajouter un patient")
+                        : t("Ajouter")}
                 </Button>
             </Heading>
             {p.resource === "prices" && (

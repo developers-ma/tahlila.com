@@ -1,3 +1,3 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" content="{{ csrf_token() }}"><title>Installation · Tahlila</title>@viteReactRefresh @vite('resources/js/installer/main.jsx')</head>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" content="{{ csrf_token() }}"><link rel="icon" type="image/png" href="{{ asset('images/icon.png') }}"><link rel="apple-touch-icon" href="{{ asset('images/icon.png') }}"><title>Installation · Tahlila</title>@viteReactRefresh @vite('resources/js/installer/main.jsx')</head>
 <body><div id="installer"></div><script id="installer-data" type="application/json">{!! json_encode($installer, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) !!}</script></body></html>
