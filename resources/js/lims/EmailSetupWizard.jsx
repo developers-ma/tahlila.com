@@ -12,6 +12,19 @@ export function EmailSetupWizard({ modal = false, configured = false, successRed
     const [status, setStatus] = useState("idle");
     const [message, setMessage] = useState("");
     const timer = useRef(null);
+    const providerHint = /@(gmail|googlemail)\.com$/i.test(form.email)
+        ? "Gmail nécessite un mot de passe d’application pour IMAP/SMTP. Utilisez le code de 16 caractères généré par Google."
+        : /@(outlook|hotmail|live|msn)\./i.test(form.email)
+          ? "Outlook et Microsoft 365 peuvent nécessiter un mot de passe d’application ou OAuth selon la sécurité du compte."
+          : /@(yahoo|ymail)\./i.test(form.email)
+            ? "Yahoo nécessite généralement un mot de passe d’application pour les connexions IMAP/SMTP."
+            : /@(icloud|me|mac)\.com$/i.test(form.email)
+              ? "iCloud nécessite un mot de passe spécifique à l’application généré depuis votre compte Apple."
+              : /@.*zoho\./i.test(form.email)
+                ? "Zoho peut nécessiter un mot de passe d’application si l’authentification à deux facteurs est activée."
+                : /@aol\.com$/i.test(form.email)
+                  ? "AOL nécessite généralement un mot de passe d’application pour IMAP/SMTP."
+                  : "";
 
     useEffect(() => () => window.clearInterval(timer.current), []);
 
@@ -50,7 +63,7 @@ export function EmailSetupWizard({ modal = false, configured = false, successRed
         </header>
         <form onSubmit={submit}>
             <label><span>{t("Adresse e-mail")}</span><div className="email-setup-input"><Mail size={17}/><input type="email" required autoComplete="username" placeholder="nom@laboratoire.com" value={form.email} onChange={(event)=>setForm({...form,email:event.target.value})}/></div></label>
-            <label><span>{t("Mot de passe de votre e-mail")}</span><div className="email-setup-input"><input type={showPassword?"text":"password"} required autoComplete="current-password" placeholder={t("Saisissez le mot de passe…")} value={form.password} onChange={(event)=>setForm({...form,password:event.target.value})}/><button type="button" aria-label={showPassword?t("Masquer"):t("Afficher")} onClick={()=>setShowPassword(!showPassword)}>{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button></div></label>
+            <label><span>{t("Mot de passe de votre e-mail")}</span><div className="email-setup-input"><input type={showPassword?"text":"password"} required autoComplete="current-password" placeholder={t("Saisissez le mot de passe…")} value={form.password} onChange={(event)=>setForm({...form,password:event.target.value})}/><button type="button" aria-label={showPassword?t("Masquer"):t("Afficher")} onClick={()=>setShowPassword(!showPassword)}>{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button></div>{providerHint && <small className="email-gmail-hint">{t(providerHint)}</small>}</label>
             <label><span>{t("Nom de l’expéditeur")} <small>{t("optionnel")}</small></span><input value={form.from_name} placeholder={t("Nom du laboratoire")} onChange={(event)=>setForm({...form,from_name:event.target.value})}/></label>
             {status !== "idle" && <div className={`email-install-progress ${status}`} role="status" aria-live="polite"><div><span style={{width:`${progress}%`}}/></div><p>{status === "working" ? t("Détection du fournisseur et installation…") : status === "done" ? <><CheckCircle2 size={16}/>{t("Configuration terminée")}</> : message}</p>{status === "done" && <small>{message}</small>}</div>}
             <div className="email-setup-actions"><Button type="button" secondary onClick={onManual}><Settings2 size={16}/>{t("Configuration manuelle")}</Button><Button type="submit" disabled={status === "working" || status === "done"}>{status === "working" ? t("Installation…") : t("Détecter et configurer")}<ChevronRight size={16}/></Button></div>

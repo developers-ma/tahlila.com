@@ -182,6 +182,10 @@ class MailboxService
         $connection = @imap_open($this->server().$folder, $this->settings->imap_username, $this->settings->imap_password, 0, 1);
         if (! $connection) {
             $errors = imap_errors() ?: [];
+            $errorText = implode(' ', $errors);
+            if (str_contains(strtolower($this->settings->imap_host), 'gmail') && str_contains(strtolower($errorText), 'auth')) {
+                throw new RuntimeException('Gmail refuse ce mot de passe pour IMAP. Activez la validation en deux étapes dans Google, puis utilisez un mot de passe d’application de 16 caractères.');
+            }
             throw new RuntimeException('Connexion IMAP impossible. '.($errors[0] ?? 'Vérifiez le serveur et les identifiants.'));
         }
 
