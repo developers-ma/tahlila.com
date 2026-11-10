@@ -15,7 +15,7 @@ http://127.0.0.1:8000
 Your installation may instead use port `8001`, a LAN address, or a production domain such as `https://lab.example.com`. Keep the route after the hostname unchanged. For example:
 
 ```text
-http://127.0.0.1:8001/staff
+http://127.0.0.1:8000/staff
 https://lab.example.com/staff
 ```
 
@@ -137,7 +137,7 @@ Use the dashboard as the starting point for daily work. Figures reflect the data
 Open:
 
 ```text
-http://127.0.0.1:8001/setting/medical-catalog
+http://127.0.0.1:8000/setting/medical-catalog
 ```
 
 This assistant installs analyses from the medical reference catalog into the laboratory's active commercial catalog.
@@ -319,7 +319,7 @@ Choose a provided palette or enter valid hexadecimal colors. Use the preview to 
 Route:
 
 ```text
-http://127.0.0.1:8001/setting/patient-portal
+http://127.0.0.1:8000/setting/patient-portal
 ```
 
 Before enabling the portal:
@@ -389,7 +389,7 @@ These screens display installation, version, deployment, license, and support in
 Open:
 
 ```text
-http://127.0.0.1:8001/staff
+http://127.0.0.1:8000/staff
 ```
 
 The Staff page shows laboratory users, roles, permission summaries, and account actions. Use the search field to find a colleague by name, email, or role.
@@ -496,7 +496,7 @@ Save the order. Authorized users can later edit its analyses, payment informatio
 Open:
 
 ```text
-http://127.0.0.1:8001/sample-collection
+http://127.0.0.1:8000/sample-collection
 ```
 
 The worklist shows orders relevant to collection. Search or filter by status, then open the intended order.
@@ -613,7 +613,7 @@ Use the standard print action for an A4-style document or the thermal print acti
 Open:
 
 ```text
-http://127.0.0.1:8001/email
+http://127.0.0.1:8000/email
 ```
 
 If email is not configured, select **Connect email** and complete the setup wizard, or open `/setting/email` for manual configuration.
