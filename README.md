@@ -4,6 +4,12 @@ Tahlila Lab is a laboratory information management system (LIMS) built with Lara
 
 The application is designed for laboratories that need a permission-controlled staff workspace, printable clinical and administrative documents, an integrated medical catalog, and a separate patient portal.
 
+## Official links
+
+- **Official website:** [tahlila.com](https://tahlila.com)
+- **Developed by:** [Developer.ma](https://developer.ma)
+- **Community email:** [community@developer.ma](mailto:community@developer.ma)
+
 ## Dashboard preview
 
 ![Tahlila Lab dashboard](public/images/dashboard.png)
