@@ -3,16 +3,22 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
+use App\Models\ApplicationInstallation;
 use App\Models\Group;
+use App\Models\LaboratorySetting;
+use App\Models\MedicalTest;
 use App\Models\Patient;
+use App\Models\PaymentMethod;
 use App\Models\Price;
 use App\Models\Role;
 use App\Models\Stock;
 use App\Models\Test;
 use App\Models\User;
+use App\Services\MedicalCatalogInstaller;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -88,5 +94,50 @@ class DatabaseSeeder extends Seeder
         });
 
         $this->call(MedicalCatalogSeeder::class);
+
+        $administrator = User::where('email', 'admin@tahlila.test')->firstOrFail();
+
+        LaboratorySetting::updateOrCreate(['id' => 1], [
+            'laboratory_name' => 'Laboratoire Tahlila Démonstration',
+            'managing_director' => 'Dr. Salma Alaoui',
+            'phone' => '+212 5 35 00 00 00',
+            'fax' => '+212 5 35 00 00 01',
+            'email' => 'contact@demo.tahlila.test',
+            'address' => '23 boulevard Mohammed V, Fès, Maroc',
+            'company_number' => 'DEMO-RC-2026',
+            'tax_id' => 'DEMO-IF-2026',
+            'footer_title1' => 'Laboratoire Tahlila Démonstration',
+            'footer_title2' => 'Données fictives réservées à la démonstration',
+            'footer_title3' => 'Fès, Maroc',
+        ]);
+
+        PaymentMethod::updateOrCreate(['id' => 1], [
+            'cash' => 'true',
+            'pos' => 'true',
+            'bank_transfer' => 'true',
+            'cheque' => 'true',
+            'currency' => 'MAD',
+            'tax' => 20,
+        ]);
+
+        $catalogTests = MedicalTest::whereIn('code', ['NFS', 'GLU', 'CREA', 'ALT', 'TSH', 'CRP'])->get();
+        app(MedicalCatalogInstaller::class)->install([
+            'installation_id' => (string) Str::uuid(),
+            'test_ids' => $catalogTests->pluck('id')->all(),
+            'group_ids' => [],
+            'prices' => $catalogTests->mapWithKeys(fn (MedicalTest $test) => [$test->id => match ($test->code) {
+                'NFS' => 120, 'GLU' => 80, 'CREA' => 90, 'ALT' => 90, 'TSH' => 150, default => 100,
+            }])->all(),
+            'group_prices' => [],
+            'effective_from' => now()->toDateString(),
+            'install_materials' => true,
+            'associate_materials' => true,
+        ], $administrator->id);
+
+        ApplicationInstallation::updateOrCreate(['id' => 1], [
+            'current_step' => 'completed',
+            'administrator_id' => $administrator->id,
+            'completed_at' => now(),
+        ]);
     }
 }

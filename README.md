@@ -6,7 +6,7 @@ The application is designed for laboratories that need a permission-controlled s
 
 ## Dashboard preview
 
-![Tahlila Lab dashboard](public/images/documentation/dashboard.png)
+![Tahlila Lab dashboard](public/images/dashboard.png)
 
 ## Documentation
 
