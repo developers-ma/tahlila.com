@@ -470,3 +470,9 @@ Desktop updates must preserve the user's `.env`, SQLite database, `storage`, and
 ## License and support
 
 Application license and support arrangements are managed by the organization responsible for the Tahlila deployment. Use the in-application maintenance and license screens or contact the deployment administrator for upgrade and support procedures.
+
+## License
+
+Tahlila is free and open-source software distributed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Developer Community SARL AU.

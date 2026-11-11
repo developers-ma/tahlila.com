@@ -2,6 +2,8 @@
 
 This guide explains how to install Tahlila as a web application on a local machine, a private network, or a production server.
 
+Tahlila is free and open-source software distributed under the [MIT License](LICENSE). Copyright (c) 2026 Developer Community SARL AU.
+
 ## Technology stack
 
 | Layer | Technology |

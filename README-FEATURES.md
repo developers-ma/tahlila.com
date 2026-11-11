@@ -4,6 +4,8 @@ Tahlila is a laboratory information management system (LIMS) that covers the wor
 
 This document is based on the application routes in `routes/web.php`, `routes/lims.php`, `routes/patient.php`, `routes/auth.php`, and `routes/api.php`, together with the controllers used by those routes.
 
+Tahlila is free and open-source software distributed under the [MIT License](LICENSE). Copyright (c) 2026 Developer Community SARL AU.
+
 ## Feature overview
 
 ### Dashboard

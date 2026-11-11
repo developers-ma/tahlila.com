@@ -2,6 +2,8 @@
 
 This user guide explains how to complete the initial setup and operate the Tahlila laboratory information management system (LIMS).
 
+Tahlila is free and open-source software distributed under the [MIT License](LICENSE). Copyright (c) 2026 Developer Community SARL AU.
+
 It is intended for laboratory administrators, reception staff, and laboratory technicians. The screens visible to each user depend on their assigned permissions.
 
 ## About the URLs in this guide
